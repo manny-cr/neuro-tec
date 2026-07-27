@@ -3673,4 +3673,24 @@ requestAnimationFrame(function () {
   } else { setup(); }
   [150, 600, 1500, 3000].forEach(function (ms) { setTimeout(setup, ms); });
 })();
-</script>
+</script><script>
+/* Collapsing the rail changes the canvas size, but the camera keeps its old
+   framing and the model sits off-centre. #reset re-fits the view, so run it
+   after each collapse pass and on any resize. */
+(function () {
+  function refit() {
+    var b = document.getElementById('reset');
+    if (b) { b.click(); }
+  }
+  [400, 1000, 2000, 3500].forEach(function (ms) { setTimeout(refit, ms); });
+  var t = null;
+  window.addEventListener('resize', function () {
+    clearTimeout(t);
+    t = setTimeout(refit, 150);
+  });
+})();
+</script><style>
+/* Embedded-hero mode: the viewer's floating overlays are unreadable at the
+   scale the phone frame renders them, so keep the stage clean. */
+#legend, #readout, #detail, #tip { display: none !important; }
+</style>

@@ -2875,3 +2875,19 @@ body {
     transform: scale(0.2814); transform-origin: top left;
 }
 .brain-open-graph { margin-top: 2px; }
+
+/* This is a phone shell, so desktop scrollbar gutters do not belong in it.
+   Scrolling still works by wheel, trackpad, touch, and keyboard. */
+.scroll,
+.phone,
+.phone * {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+.scroll::-webkit-scrollbar,
+.phone::-webkit-scrollbar,
+.phone *::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+}
