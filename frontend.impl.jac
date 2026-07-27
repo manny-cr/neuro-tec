@@ -116,6 +116,52 @@ impl app.loadDemo -> None {
     busy = False;
 }
 
+impl app.loadCalendar -> None {
+    # Every intermediate value is held in a LOCAL. Reading a `has` field back
+    # after an `await` returns the render-time snapshot, not the value just
+    # assigned -- so `calConnected` would still read False here and the whole
+    # branch below would be skipped.
+    try {
+        link = await get_connection();
+        connected = bool(link and link.connected);
+        calConnected = connected;
+
+        if connected {
+            # Stored events first -- instant paint from the graph.
+            stored = await list_events();
+            events = stored;
+
+            # Then refresh from the source. A failure here leaves the list
+            # above untouched: offline should look like slightly stale data,
+            # never an empty calendar.
+            synced = await sync_events();
+            if synced and len(synced) > 0 {
+                events = synced;
+            }
+        }
+    } except Exception {
+        # A dead calendar service must not blank the brain tabs, so this one
+        # stays quiet: the tab shows its connect state instead of a toast.
+        calConnected = False;
+    }
+}
+
+impl app.connectCalendar -> None {
+    calConnecting = True;
+    try {
+        linked = await connect_demo();
+        calConnected = bool(linked and linked.connected);
+        # Not `loaded` -- the shell already has a `loaded: bool` for the brain,
+        # and shadowing it here types the whole assignment as bool.
+        fetched = await list_events();
+        events = fetched;
+        error = "";
+    } except Exception {
+        error = "Couldn't connect the calendar. Nothing was changed.";
+    }
+    calConnecting = False;
+}
+
 impl app.wipe -> None {
     busy = True;
     try {

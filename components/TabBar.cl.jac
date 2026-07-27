@@ -57,7 +57,14 @@ def:pub TabBar(
         <path d="M4.5 20a7.5 7.5 0 0 1 15 0"/>
     </svg>;
 
-    return <nav className="tabbar">
+    cal = <svg width="21" height="21" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3.5" y="5" width="17" height="15" rx="2.6"/>
+        <path d="M3.5 9.5h17M8 3.5v3M16 3.5v3"/>
+        <circle cx="12" cy="14.5" r="1.15" fill="currentColor" stroke="none"/>
+    </svg>;
+
+    return <nav className="tabbar six">
         <Tab name="brain" label="Brain" active={active == "brain"} icon={brain} onSelect={onSelect}/>
         <Tab name="graph" label="Graph" active={active == "graph"} icon={graph} onSelect={onSelect}/>
         <button className="fab" onClick={compose} aria-label="Capture">
@@ -66,6 +73,7 @@ def:pub TabBar(
                 <path d="M12 5v14M5 12h14"/>
             </svg>
         </button>
+        <Tab name="calendar" label="Calendar" active={active == "calendar"} icon={cal} onSelect={onSelect}/>
         <Tab name="skills" label="Skills" active={active == "skills"} icon={spark} onSelect={onSelect}/>
         <Tab name="profile" label="Profile" active={active == "profile"} icon={me} onSelect={onSelect}/>
     </nav>;

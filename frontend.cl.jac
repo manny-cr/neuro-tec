@@ -13,11 +13,18 @@ import from .components.TabBar { TabBar }
 import from .components.Composer { Composer }
 import from .components.Skills { Skills }
 import from .components.ConfirmDialog { ConfirmDialog }
+import from .components.CalendarScreen { CalendarScreen }
+import from .components.EventScreen { EventScreen }
 import from .components.palette { cat_color }
 
 sv import from endpoints {
     GraphNode, GraphLink, SkillView, LoadBrain,
     create_thought, delete_thought, seed_demo, reset_brain
+}
+
+sv import from reinforce.api {
+    EventView, ConnectionView,
+    get_connection, connect_demo, list_events, sync_events
 }
 
 def:pub app -> JsxElement {
@@ -33,10 +40,17 @@ def:pub app -> JsxElement {
         loaded: bool = False,
         error: str = "",
         confirmWipe: bool = False,
-        pendingDelete: str = "";
+        pendingDelete: str = "",
+        # ── Calendar ──────────────────────────────────────────────────────
+        events: list[EventView] = [],
+        calConnected: bool = False,
+        calConnecting: bool = False,
+        calDay: str = "",
+        openEvent: str = "";
 
     async can with entry {
         refresh();
+        loadCalendar();
     }
 
     async def refresh -> None;
@@ -44,10 +58,32 @@ def:pub app -> JsxElement {
     async def confirmDelete -> None;
     async def loadDemo -> None;
     async def wipe -> None;
+    async def loadCalendar -> None;
+    async def connectCalendar -> None;
 
     def choose(name: str) -> None {
         tab = name;
         focus = "";
+        # Leaving the calendar drops back to the month view, so returning to
+        # the tab never resumes on an event you have moved on from.
+        if name != "calendar" {
+            openEvent = "";
+        }
+    }
+
+    def pickDay(key: str) -> None {
+        calDay = key;
+    }
+
+    def openEventScreen(id: str) -> None {
+        openEvent = id;
+    }
+
+    def closeEventScreen() -> None {
+        # Re-read the calendar so an intention set on the detail screen shows
+        # on the row you came back to.
+        openEvent = "";
+        loadCalendar();
     }
 
     def toggle(name: str) -> None {
@@ -208,6 +244,28 @@ def:pub app -> JsxElement {
                     onExpandLegend={flipLegend}
                     onDelete={deleteFocused}
                     onCapture={startHere}
+                />
+            }}
+            {#* The calendar lives here, in the frame, like every other tab.
+                The event screen swaps in over it -- same shell, same tab bar,
+                so opening an event never leaves the phone. *#}
+            {if tab == "calendar" and openEvent {
+                <EventScreen
+                    key={"event-" + openEvent}
+                    eventId={openEvent}
+                    onBack={closeEventScreen}
+                />
+            }}
+            {if tab == "calendar" and not openEvent {
+                <CalendarScreen
+                    key="calendar"
+                    events={events}
+                    connected={calConnected}
+                    busy={calConnecting}
+                    selectedDay={calDay}
+                    onSelectDay={pickDay}
+                    onOpen={openEventScreen}
+                    onConnect={connectCalendar}
                 />
             }}
             {if tab == "skills" {
