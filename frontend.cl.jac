@@ -13,6 +13,7 @@ import from .components.TabBar { TabBar }
 import from .components.Composer { Composer }
 import from .components.Skills { Skills }
 import from .components.ConfirmDialog { ConfirmDialog }
+import from .components.BrainPortrait { BrainPortrait }
 import from .components.palette { cat_color }
 
 sv import from endpoints {
@@ -92,6 +93,10 @@ def:pub app -> JsxElement {
 
     def startHere(_e: MouseEvent) -> None {
         composing = True;
+    }
+
+    def startDemo(_e: MouseEvent) -> None {
+        loadDemo();
     }
 
     def openComposerFromBrain() -> None {
@@ -226,40 +231,52 @@ def:pub app -> JsxElement {
             }}
             {if tab == "profile" {
                 <div key="profile" className="scroll profile-page">
-                    <div className="profile-hero">
+                    <header className="profile-top">
                         <span className="profile-avatar">M</span>
-                        <h2>Mercedes</h2>
-                        <p>Second brain operator</p>
+                        <div className="profile-id">
+                            <h1 className="profile-name">Mercedes</h1>
+                            <p className="profile-role">Second brain operator</p>
+                        </div>
+                    </header>
+
+                    <p className="profile-summary">
+                        {str(thoughtCount) + " thoughts · " + str(len(skills)) + " skills forming"}
+                    </p>
+
+                    {if thoughtCount > 0 {
+                        <BrainPortrait
+                            key="portrait"
+                            nodes={nodes}
+                            links={links}
+                            skills={skills}
+                        />
+                    }}
+
+                    <div className="action-list">
+                        {if thoughtCount == 0 {
+                            <button
+                                key="demo"
+                                className="action-row"
+                                onClick={startDemo}
+                                disabled={busy}
+                            >
+                                <span className="action-label">Load demo data</span>
+                                <span className="action-note">
+                                    Fills the brain with a sample set to explore
+                                </span>
+                            </button>
+                        }}
+                        <button
+                            className="action-row danger"
+                            onClick={askWipe}
+                            disabled={busy}
+                        >
+                            <span className="action-label">Erase this brain</span>
+                            <span className="action-note">
+                                Removes every thought, skill and connection
+                            </span>
+                        </button>
                     </div>
-                    <div className="stat-grid">
-                        <div className="stat">
-                            <div className="stat-num">{str(thoughtCount)}</div>
-                            <div className="stat-lbl">Thoughts</div>
-                        </div>
-                        <div className="stat">
-                            <div className="stat-num">{str(len(skills))}</div>
-                            <div className="stat-lbl">Skills</div>
-                        </div>
-                        <div className="stat">
-                            <div className="stat-num">{str(len(links))}</div>
-                            <div className="stat-lbl">Links</div>
-                        </div>
-                        <div className="stat">
-                            <div className="stat-num">{str(len(nodes))}</div>
-                            <div className="stat-lbl">Nodes</div>
-                        </div>
-                    </div>
-                    <p className="section-title">About</p>
-                    <div className="glass-card">
-                        <p className="card-text">
-                            {"Every thought is a node on a Jac graph. Relatedness is a typed Link edge, "
-                             + "and a Builds edge points at the skill a memory moved forward."}
-                        </p>
-                    </div>
-                    <p className="section-title danger-label">Danger zone</p>
-                    <button className="ghost-btn wide" onClick={askWipe} disabled={busy}>
-                        Erase this brain
-                    </button>
                 </div>
             }}
         </main>

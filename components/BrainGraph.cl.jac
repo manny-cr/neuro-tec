@@ -50,7 +50,11 @@ glob SHEET_FRAC: float = 0.46;
 
 # Camera source of truth (see module docstring). `seen` remembers the node
 # count so the auto-fit fires on first data and again after a wipe+reseed.
-glob cam: dict[str, float] = {"x": 0.0, "y": 0.0, "w": 1000.0, "seen": 0.0};
+# `touched` records that the user has driven the camera themselves, which
+# stops a resize from yanking the view back to the overview under them.
+glob cam: dict[str, float] = {
+    "x": 0.0, "y": 0.0, "w": 1000.0, "seen": 0.0, "touched": 0.0
+};
 
 # Measured container box: width in CSS px and aspect as height/width. A glob
 # for the same reason the camera is one - `fit_camera` runs inside the mount
@@ -268,6 +272,7 @@ def:pub BrainGraph(
 
     """Re-centre a new width around the current view centre, clamped."""
     def apply_zoom(new_w: float) -> None {
+        cam["touched"] = 1.0;
         w = new_w;
         if w < MIN_W {
             w = MIN_W;
@@ -331,6 +336,7 @@ def:pub BrainGraph(
     see rather than behind the sheet.
     """
     def glide_to(cx: float, cy: float, tw: float, band: float) -> None {
+        cam["touched"] = 1.0;
         w = tw;
         if w < MIN_W {
             w = MIN_W;
@@ -403,12 +409,39 @@ def:pub BrainGraph(
         );
     }
 
+    """Re-measure after the container changes size, and reframe if the view
+    is still the one we chose rather than one the user drove themselves.
+
+    Without this the camera keeps a width chosen for the old container while
+    labels and hit targets keep dividing by a stale container width, so both
+    the framing and the fixed-size type drift away from correct.
+    """
+    def sync_view() -> None {
+        was_w = view["w"];
+        was_ar = view["ar"];
+        measure_view();
+        moved = view["w"] - was_w;
+        if moved < 0.0 {
+            moved = -moved;
+        }
+        tilted = view["ar"] - was_ar;
+        if tilted < 0.0 {
+            tilted = -tilted;
+        }
+        if (moved > 1.0 or tilted > 0.01) and cam["touched"] == 0.0 {
+            stop_motion();
+            fit_camera();
+        }
+    }
+
     can with [nodes] entry {
         measure_view();
         if len(nodes) > 0 and cam["seen"] == 0.0 {
             fit_camera();
         }
         cam["seen"] = len(nodes);
+        window.addEventListener("resize", sync_view);
+        return lambda { window.removeEventListener("resize", sync_view); };
     }
 
     def pointer_down(e: Event) {
@@ -446,6 +479,7 @@ def:pub BrainGraph(
             gesture["vx"] = gesture["vx"] * 0.7 + dx * 0.3;
             gesture["vy"] = gesture["vy"] * 0.7 + dy * 0.3;
             k = world_per_px(p.currentTarget);
+            cam["touched"] = 1.0;
             set_cam(cam["x"] - dx * k, cam["y"] - dy * k, cam["w"]);
         } elif gesture["mode"] == 2.0 {
             if p.pointerId == gesture["id1"] {
@@ -508,6 +542,7 @@ def:pub BrainGraph(
     def zoom_reset(_e: MouseEvent) {
         stop_motion();
         measure_view();
+        cam["touched"] = 0.0;
         fit_camera();
     }
 

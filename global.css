@@ -1998,39 +1998,183 @@ body {
 
 /* ── Profile ───────────────────────────────────────────────────────── */
 
-.profile-page { padding-top: 20px; }
-
-.profile-hero {
-  display: grid;
-  justify-items: center;
-  gap: 8px;
-  margin: 12px 0 22px;
-  text-align: center;
+/* Column so the action list can be pushed to the floor once there is a
+   portrait above it - otherwise the screen ends halfway down. */
+.profile-page {
+  padding-top: 34px;
+  display: flex;
+  flex-direction: column;
 }
 
-.profile-avatar {
-  display: grid;
-  place-items: center;
-  width: 64px;
-  height: 64px;
-  border-radius: 18px;
-  background: var(--accent-strong);
-  font-size: 24px;
+.profile-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 10px;
+}
+
+.profile-id { min-width: 0; }
+
+.profile-name {
+  margin: 0;
+  font-size: var(--fs-lg);
   font-weight: 600;
-}
-
-.profile-hero h2 {
-  margin: 8px 0 0;
-  font-size: 24px;
-  font-weight: 700;
   letter-spacing: -0.02em;
 }
 
-.profile-hero p {
-  margin: 0;
+.profile-role {
+  margin: 2px 0 0;
   color: var(--text-2);
   font-size: var(--fs-sm);
 }
+
+.profile-summary {
+  margin: 0 0 26px;
+  color: var(--text-3);
+  font-size: var(--fs-sm);
+}
+
+/* Zinc, not accent: the Capture button is the only blue square on screen. */
+.profile-avatar {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 46px;
+  height: 46px;
+  border: 1px solid var(--border-strong);
+  border-radius: 14px;
+  background: var(--bg-elev);
+  color: var(--text-2);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+/* ── Profile: brain portrait ───────────────────────────────────────── */
+
+.brain-portrait { display: grid; }
+
+.portrait-block { min-width: 0; }
+
+/* One continuous rail: segments butt together with no gaps, and the track
+   only shows through if the brain is somehow empty. */
+.mix-bar {
+  display: flex;
+  height: 9px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--bg-elev);
+}
+
+.mix-seg { height: 100%; }
+
+.mix-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px 16px;
+  margin: 15px 2px 0;
+}
+
+.mix-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+.mix-dot {
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+}
+
+.mix-name {
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+  text-transform: capitalize;
+}
+
+.mix-count {
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.fact-list {
+  display: grid;
+  border-top: 1px solid var(--border);
+}
+
+.fact-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 13px 2px;
+  border-bottom: 1px solid var(--border);
+  animation: card-in 320ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+.fact-label {
+  flex: 0 0 auto;
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+}
+
+/* Thought labels are free text, so the answer is clipped rather than
+   allowed to wrap and break the row cadence. */
+.fact-value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  color: var(--text);
+  text-align: right;
+}
+
+/* Same list grammar as Skills: hairline dividers, whole row tappable. */
+.action-list {
+  display: grid;
+  border-top: 1px solid var(--border);
+}
+
+.action-row {
+  display: grid;
+  gap: 3px;
+  width: 100%;
+  padding: 15px 2px 16px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.action-row:active { background: #ffffff06; }
+.action-row:disabled { opacity: 0.45; cursor: default; }
+
+/* Only when there is a portrait to sit under. An empty brain keeps the
+   demo-data row where it always was, right below the summary. */
+.brain-portrait + .action-list { margin-top: auto; }
+
+.action-label {
+  font-size: var(--fs-md);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.action-note {
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+  line-height: 1.4;
+}
+
+.action-row.danger .action-label { color: var(--danger); }
 
 .stat {
   border-radius: var(--r-lg);
