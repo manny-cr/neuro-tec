@@ -23,6 +23,7 @@ the answered slots back from the graph.
 import from react { useEffect }
 
 import from .BigConfetti { BigConfetti }
+import from .SurveyOverlay { SurveyOverlay }
 import from ..reinforce.timefmt {
     countdown_label, time_label, date_label, duration_label, has_ended, now_ms
 }
@@ -35,15 +36,9 @@ import from ..reinforce.notify {
 
 sv import from ..reinforce.api {
     EventView, IntentionPreset, get_event, list_intentions, list_pings,
-    set_intention, set_interval, mark_primed, record_ping, record_reflection
+    set_intention, set_interval, mark_primed, record_ping, record_survey
 }
 
-
-glob REFLECTIONS: list[list[str]] = [
-    ["yes", "Yes, I did"],
-    ["partly", "Partly"],
-    ["no", "Not this time"]
-];
 
 glob INTERVALS: list[list[str]] = [
     ["5", "5 min"], ["10", "10 min"], ["15", "15 min"],
@@ -72,6 +67,10 @@ def:pub EventScreen(
     has reflectionNotified: bool = False;
     has permission: str = "default";
 
+    has surveyOpen: bool = False;
+    has surveyDismissed: bool = False;
+    has surveySaving: bool = False;
+
     async can with entry {
         if not eventId {
             loading = False;
@@ -98,10 +97,20 @@ def:pub EventScreen(
     due = "";
     ended = False;
     priming_due = False;
+    survey_due = False;
     remaining = 0;
 
     if event is not None {
         ended = has_ended(event.ends_at);
+        # Only for an event the user actually committed to. Surveying an event
+        # they never set an intention for asks about an experience the app had
+        # no part in.
+        survey_due = (
+            ended
+            and bool(event.intention_key)
+            and not event.surveyed
+            and not surveyDismissed
+        );
         if event.intention_key {
             slots = reminder_slots(
                 event.starts_at, event.ends_at, event.interval_minutes
@@ -142,11 +151,20 @@ def:pub EventScreen(
 
     useEffect(lambda {
         if ended and event is not None and event.intention_key
-            and not event.reflection and not reflectionNotified {
+            and not event.surveyed and not reflectionNotified {
             reflectionNotified = True;
             fire_reflection("reflect-" + event.id);
         }
     }, [ended]);
+
+    # The prompt. Raised off `survey_due` rather than off `ended` directly, so
+    # it also appears for an event that finishes while the screen is open --
+    # the heartbeat flips `ended`, and this follows one render later.
+    useEffect(lambda {
+        if survey_due and not surveyOpen {
+            surveyOpen = True;
+        }
+    }, [survey_due]);
 
     # ── Handlers ────────────────────────────────────────────────────────────
 
@@ -194,15 +212,28 @@ def:pub EventScreen(
         }
     }
 
-    async def reflect(rating: str) -> None {
+    async def submit_survey(comfort: int, mood: int, presence: int) -> None {
         current = event;
         if current is None {
             return;
         }
-        updated = await record_reflection(current.id, rating);
+        surveySaving = True;
+        updated = await record_survey(current.id, comfort, mood, presence);
         if updated is not None {
             event = updated;
         }
+        surveySaving = False;
+        surveyOpen = False;
+    }
+
+    def skip_survey() {
+        surveyOpen = False;
+        surveyDismissed = True;
+    }
+
+    def reopen_survey(_e: MouseEvent) {
+        surveyDismissed = False;
+        surveyOpen = True;
     }
 
     async def confirm_primed -> None {
@@ -345,21 +376,28 @@ def:pub EventScreen(
             </div>
         }}
 
-        {#* ── Reflection, once it is over ─────────────────────────────── *#}
-        {if ended and event.intention_key {
-            <section key="reflect" className="ev-section">
-                <h2 className="section-label">How did it go?</h2>
-                <div className="ev-reflect">
-                    {for row in REFLECTIONS {
-                        <ReflectButton
-                            key={row[0]}
-                            value={row[0]}
-                            label={row[1]}
-                            chosen={event.reflection == row[0]}
-                            onChoose={reflect}
-                        />
-                    }}
+        {#* ── The survey result, once it is in ────────────────────────── *#}
+        {if ended and event.surveyed {
+            <section key="survey-done" className="ev-section">
+                <h2 className="section-label">How it felt</h2>
+                <div className="ev-readout">
+                    <SurveyReadout label="Comfort" value={event.comfort}/>
+                    <SurveyReadout label="Energy" value={event.mood}/>
+                    <SurveyReadout label="Presence" value={event.presence}/>
                 </div>
+                <button className="text-btn sm" onClick={reopen_survey}>
+                    Change my answers
+                </button>
+            </section>
+        }}
+
+        {#* An ended event whose survey was skipped keeps one way back in. *#}
+        {if ended and event.intention_key and not event.surveyed and surveyDismissed {
+            <section key="survey-skipped" className="ev-section">
+                <h2 className="section-label">How did it go?</h2>
+                <button className="ghost-btn wide-quiet" onClick={reopen_survey}>
+                    Take the survey
+                </button>
             </section>
         }}
 
@@ -445,8 +483,31 @@ def:pub EventScreen(
             </div>
         }}
 
+        {#* ── The post-event survey ───────────────────────────────────── *#}
+        {if surveyOpen {
+            <SurveyOverlay
+                key="survey"
+                eventTitle={event.title}
+                busy={surveySaving}
+                onSubmit={submit_survey}
+                onSkip={skip_survey}
+            />
+        }}
+
         {#* Mounted last so it paints over everything, including the banner. *#}
         <BigConfetti burstKey={burstKey}/>
+    </div>;
+}
+
+
+"""One recorded axis, as a filled bar. Read-only: the survey itself is the
+place to change an answer, not this."""
+def:pub SurveyReadout(label: str, value: int) -> JsxElement {
+    return <div className="ev-readout-row">
+        <span className="ev-readout-label">{label}</span>
+        <span className="ev-readout-track">
+            <span className="ev-readout-fill" style={{"width": str(value) + "%"}}></span>
+        </span>
     </div>;
 }
 
@@ -484,22 +545,6 @@ def:pub IntervalButton(
     }
 
     return <button className={"ev-chip on" if selected else "ev-chip"} onClick={tap}>
-        {label}
-    </button>;
-}
-
-
-def:pub ReflectButton(
-    value: str,
-    label: str,
-    chosen: bool,
-    onChoose: Callable[[str], None]
-) -> JsxElement {
-    def tap(_e: MouseEvent) {
-        onChoose(value);
-    }
-
-    return <button className={"ev-reflect-btn on" if chosen else "ev-reflect-btn"} onClick={tap}>
         {label}
     </button>;
 }

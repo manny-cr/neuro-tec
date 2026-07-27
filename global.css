@@ -2625,3 +2625,242 @@ body {
 
 .goal-setup .primary-btn { margin-top: 10px; }
 .goal-setup .primary-btn:disabled { opacity: 0.4; cursor: default; }
+
+/* ── Post-event survey ─────────────────────────────────────────────── */
+
+.survey {
+  position: absolute;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  align-items: center;
+  padding: 26px 22px calc(var(--tabbar-h) + 10px);
+  background: var(--bg);
+  overflow-y: auto;
+  animation: view-in 340ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* The recalling brain. Sits behind the content, fills the screen, and is
+   never interactive. */
+.recall-field {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.recall-core {
+  transform-origin: 200px 250px;
+  animation: recall-swell 4.8s ease-in-out infinite;
+}
+
+@keyframes recall-swell {
+  0%, 100% { opacity: 0.5; transform: scale(0.92); }
+  50%      { opacity: 1;   transform: scale(1.06); }
+}
+
+.recall-wires line {
+  stroke: #5b8cff;
+  stroke-opacity: 0.32;
+  stroke-width: 1.2;
+}
+
+.recall-cells circle {
+  fill: #5b8cff;
+  fill-opacity: 0.5;
+  animation: recall-breathe 3.6s ease-in-out infinite;
+}
+
+@keyframes recall-breathe {
+  0%, 100% { fill-opacity: 0.4; }
+  50%      { fill-opacity: 1; }
+}
+
+/* The travelling signal. A short dash chases the whole length of the path
+   on a loop -- one element per path, no JS. */
+.recall-signal {
+  fill: none;
+  stroke: #a8c4ff;
+  stroke-width: 2.8;
+  stroke-linecap: round;
+  stroke-dasharray: 30 1000;
+  filter: drop-shadow(0 0 7px #5b8cff);
+  animation-name: recall-travel;
+  animation-timing-function: cubic-bezier(0.5, 0, 0.5, 1);
+  animation-iteration-count: infinite;
+}
+
+@keyframes recall-travel {
+  0%   { stroke-dashoffset: 1026; opacity: 0; }
+  12%  { opacity: 1; }
+  88%  { opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 0; }
+}
+
+/* Content sits above the field, on its own scrim so the text stays legible
+   over a moving background. */
+.survey-body {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 16px;
+  align-content: center;
+  padding: 20px 18px 22px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  /* Deliberately thin, and only lightly blurred: the pulsing field has to
+     stay legible *through* the card, not just around it. A heavier scrim
+     hides the one thing this screen is built around. */
+  background: #0a0a0cad;
+  backdrop-filter: blur(3px);
+}
+
+.survey-head { display: grid; gap: 5px; }
+
+.survey-kicker {
+  margin: 0;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.survey-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 650;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.survey-lede {
+  margin: 0;
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  color: var(--text-2);
+}
+
+.survey-axis { display: grid; gap: 8px; }
+
+.survey-prompt {
+  font-size: var(--fs-sm);
+  font-weight: 550;
+  color: var(--text);
+}
+
+.survey-scale {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.survey-word {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--accent);
+  text-align: center;
+}
+
+/* Slider. Styled from scratch on both engines: the native control carries a
+   platform accent colour that has nothing to do with this palette. The track
+   is one box with a gradient stop at --fill, so there is no second element to
+   keep in sync at any width. */
+.survey-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 26px;
+  background: none;
+  cursor: pointer;
+}
+
+.survey-range::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--accent) 0 var(--fill),
+    #ffffff1c var(--fill) 100%
+  );
+}
+
+.survey-range::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--accent) 0 var(--fill),
+    #ffffff1c var(--fill) 100%
+  );
+}
+
+.survey-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  margin-top: -8px;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 6px #0009;
+  transition: transform 120ms ease;
+}
+
+.survey-range::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 6px #0009;
+}
+
+.survey-range:active::-webkit-slider-thumb { transform: scale(1.15); }
+.survey-range:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+
+.survey-body .primary-btn { margin-top: 4px; }
+.survey-body .primary-btn:disabled { opacity: 0.5; }
+
+.survey-skip { justify-self: center; }
+
+/* Recorded result, back on the event screen. */
+.ev-readout { display: grid; gap: 9px; }
+
+.ev-readout-row {
+  display: grid;
+  grid-template-columns: 74px 1fr;
+  align-items: center;
+  gap: 10px;
+}
+
+.ev-readout-label {
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+}
+
+.ev-readout-track {
+  height: 6px;
+  border-radius: 999px;
+  background: #ffffff14;
+  overflow: hidden;
+}
+
+.ev-readout-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .recall-core,
+  .recall-cells circle,
+  .recall-signal { animation: none; }
+  .recall-signal { opacity: 0.5; stroke-dashoffset: 0; stroke-dasharray: none; }
+}

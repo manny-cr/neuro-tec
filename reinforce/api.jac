@@ -25,6 +25,7 @@ import from reinforce.store {
     mark_primed as _mark_primed,
     record_ping as _record_ping,
     record_reflection as _record_reflection,
+    record_survey as _record_survey,
     disconnect_calendar as _disconnect_calendar
 }
 import from reinforce.sources {
@@ -112,4 +113,11 @@ def:pub record_ping(event_id: str, scheduled_for: str, response: str) -> EventVi
 
 def:pub record_reflection(event_id: str, rating: str) -> EventView | None {
     return _record_reflection(event_id, rating);
+}
+
+
+def:pub record_survey(
+    event_id: str, comfort: int, mood: int, presence: int
+) -> EventView | None {
+    return _record_survey(event_id, comfort, mood, presence);
 }

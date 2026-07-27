@@ -31,6 +31,7 @@ edge Scheduled {}                              # root -> CalEvent
 edge Prepares: CalEvent --> Preparation {}
 edge Pinged: Preparation --> ReminderPing {}
 edge Reflected: Preparation --> Reflection {}
+edge Surveyed: Preparation --> Survey {}
 
 
 # ─── Nodes ───────────────────────────────────────────────────────────────────
@@ -109,6 +110,27 @@ node Reflection {
 }
 
 
+"""The post-event survey: three 0-100 readings taken once, after the fact.
+
+Stored as integers on a 0-100 scale rather than a 1-5 rating because the input
+is a slider -- collapsing to five buckets at write time would throw away
+resolution the user actually expressed, and nothing downstream needs buckets.
+
+Each axis is signed so that higher is better, which is the only way an average
+across axes means anything later:
+
+  comfort   uneasy      -> at ease
+  mood      drained     -> energized
+  presence  distracted  -> fully present
+"""
+node Survey {
+    has comfort: int = 50,
+        mood: int = 50,
+        presence: int = 50,
+        created_at: str = "";
+}
+
+
 # ─── View models ─────────────────────────────────────────────────────────────
 # The client gets flat, already-joined objects. It never walks the graph, and
 # never recomputes anything the server already knows.
@@ -130,7 +152,14 @@ obj EventView {
         primed: bool,
         answered_count: int,
         yes_count: int,
-        reflection: str;
+        reflection: str,
+        # The survey, flattened. `surveyed` is what the client branches on --
+        # the three values are 50 when nothing has been recorded, and 50 is
+        # also a legitimate answer, so they cannot stand in for "done".
+        surveyed: bool,
+        comfort: int,
+        mood: int,
+        presence: int;
 }
 
 
@@ -200,6 +229,10 @@ def _view_of(event: CalEvent) -> EventView {
     answered = 0;
     yeses = 0;
     rating = "";
+    surveyed = False;
+    comfort = 50;
+    mood = 50;
+    presence = 50;
 
     if prep is not None {
         intention = prep.intention_key;
@@ -214,6 +247,13 @@ def _view_of(event: CalEvent) -> EventView {
         reflections = [prep ->:Reflected:->];
         if reflections {
             rating = reflections[0].rating;
+        }
+        surveys = [prep ->:Surveyed:->];
+        if surveys {
+            surveyed = True;
+            comfort = surveys[0].comfort;
+            mood = surveys[0].mood;
+            presence = surveys[0].presence;
         }
     }
 
@@ -234,7 +274,11 @@ def _view_of(event: CalEvent) -> EventView {
         primed=primed,
         answered_count=answered,
         yes_count=yeses,
-        reflection=rating
+        reflection=rating,
+        surveyed=surveyed,
+        comfort=comfort,
+        mood=mood,
+        presence=presence
     );
 }
 
@@ -417,6 +461,40 @@ def record_reflection(event_id: str, rating: str) -> EventView | None {
         existing[0].created_at = now_iso();
     } else {
         prep +>: Reflected() :+> Reflection(rating=rating, created_at=now_iso());
+    }
+    return _view_of(event);
+}
+
+
+"""Record the post-event survey. Re-submitting overwrites.
+
+Values are clamped rather than rejected: this is the last screen of a flow the
+user has already finished, and failing it over an out-of-range integer would
+lose the whole response to protect data nobody is going to audit.
+"""
+def record_survey(
+    event_id: str, comfort: int, mood: int, presence: int
+) -> EventView | None {
+    event = _find_event(event_id);
+    if event is None {
+        return None;
+    }
+    prep = _ensure_preparation(event);
+
+    c = max(0, min(100, comfort));
+    m = max(0, min(100, mood));
+    p = max(0, min(100, presence));
+
+    existing = [prep ->:Surveyed:->];
+    if existing {
+        existing[0].comfort = c;
+        existing[0].mood = m;
+        existing[0].presence = p;
+        existing[0].created_at = now_iso();
+    } else {
+        prep +>: Surveyed() :+> Survey(
+            comfort=c, mood=m, presence=p, created_at=now_iso()
+        );
     }
     return _view_of(event);
 }

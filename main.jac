@@ -24,7 +24,8 @@ import from reinforce.api {
     get_connection, connect_demo, google_auth_url, complete_google_connect,
     sync_events, disconnect_calendar,
     list_intentions, list_events, get_event, list_pings,
-    set_intention, set_interval, mark_primed, record_ping, record_reflection
+    set_intention, set_interval, mark_primed, record_ping, record_reflection,
+    record_survey
 }
 
 # Client-side UI
