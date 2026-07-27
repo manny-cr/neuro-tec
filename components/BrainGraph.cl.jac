@@ -105,7 +105,11 @@ def:pub GraphNodeMark(
     }
 
     skill = item.kind == "skill";
-    color = "#c9d1ff" if skill else cat_color(item.category);
+    tint = cat_color(item.category);
+    # Skills stay zinc + accent; thoughts keep their category hue.
+    accent = "#5b8cff";
+    color = accent if skill else tint;
+    label_fill = "#e8eaef" if skill else tint;
     r = node_radius(item.kind, item.strength);
 
     # `scale` is world units per screen pixel: multiplying by it pins a
@@ -115,6 +119,15 @@ def:pub GraphNodeMark(
         hit = r;
     }
     label_px = (SKILL_LABEL_PX if skill else LABEL_PX) * scale;
+    # Hairline rim that stays readable across zoom.
+    rim = 1.35 * scale;
+    if rim < 1.0 {
+        rim = 1.0;
+    }
+    ring_w = 2.2 * scale;
+    if ring_w < 1.6 {
+        ring_w = 1.6;
+    }
 
     klass = "gnode";
     if dim {
@@ -131,24 +144,24 @@ def:pub GraphNodeMark(
         delay = 600;
     }
 
-    # Mastery ring geometry (skills only).
-    ring_r = r + 8.0;
+    # Mastery ring sits just outside the hub — thin track, quiet arc.
+    ring_r = r + 5.5;
     circ = 6.28318 * ring_r;
 
     return <g className={klass} style={{"animationDelay": str(delay) + "ms"}} onClick={handle}>
         <circle cx={item.x} cy={item.y} r={hit} fill="transparent" pointerEvents="all"/>
         {if lit {
-            <circle key="glow" className="gnode-glow" cx={item.x} cy={item.y} r={r * 2.4} fill={color}/>
+            <circle key="glow" className="gnode-glow" cx={item.x} cy={item.y} r={r * 2.1} fill={color}/>
         }}
         {if skill {
             <circle
                 key="ring-track"
+                className="gnode-ring-track"
                 cx={item.x}
                 cy={item.y}
                 r={ring_r}
                 fill="none"
-                stroke="#2b2e3d"
-                strokeWidth={3.0}
+                strokeWidth={ring_w}
             />
             <circle
                 key="ring"
@@ -157,33 +170,61 @@ def:pub GraphNodeMark(
                 cy={item.y}
                 r={ring_r}
                 fill="none"
-                stroke={color}
-                strokeWidth={3.0}
+                stroke={accent}
+                strokeWidth={ring_w}
                 strokeLinecap="round"
                 strokeDasharray={str(circ * mastery) + " " + str(circ)}
                 transform={"rotate(-90 " + str(item.x) + " " + str(item.y) + ")"}
             />
+            <circle
+                key="core"
+                className="gnode-core skill"
+                cx={item.x}
+                cy={item.y}
+                r={r}
+                fill="#121316"
+                stroke={accent}
+                strokeWidth={rim * 1.4}
+            />
+            <circle
+                key="pupil"
+                className="gnode-pupil"
+                cx={item.x}
+                cy={item.y}
+                r={r * 0.34}
+                fill={accent}
+            />
+        } else {
+            <circle
+                key="core"
+                className="gnode-core"
+                cx={item.x}
+                cy={item.y}
+                r={r}
+                fill={tint}
+                stroke="#0a0a0c"
+                strokeWidth={rim}
+            />
+            <circle
+                key="sheen"
+                className="gnode-sheen"
+                cx={item.x - r * 0.28}
+                cy={item.y - r * 0.28}
+                r={r * 0.32}
+                fill="#ffffff"
+            />
         }}
-        <circle
-            className={"gnode-core skill" if skill else "gnode-core"}
-            cx={item.x}
-            cy={item.y}
-            r={r}
-            fill={"#171a2e" if skill else color}
-            stroke={color}
-            strokeWidth={3.0 if skill else 0.0}
-        />
         {if labelled {
             <text
                 key="label"
                 className={"glabel skill" if skill else "glabel"}
                 x={labelX}
-                y={item.y + (ring_r if skill else r) + label_px * 1.4}
+                y={item.y + (ring_r if skill else r) + label_px * 1.35}
                 textAnchor="middle"
-                fill={color}
+                fill={label_fill}
                 style={{
                     "fontSize": str(label_px) + "px",
-                    "strokeWidth": str(3.0 * scale) + "px"
+                    "strokeWidth": str(3.2 * scale) + "px"
                 }}
             >
                 {trim(item.label, 17 if skill else 22)}
@@ -200,8 +241,9 @@ def:pub edge_path(x1: float, y1: float, x2: float, y2: float) -> str {
     if d < 1.0 {
         return "M " + str(x1) + " " + str(y1) + " L " + str(x2) + " " + str(y2);
     }
-    mx = (x1 + x2) / 2.0 - dy / d * d * 0.14;
-    my = (y1 + y2) / 2.0 + dx / d * d * 0.14;
+    # Shallow bow — enough curve to feel organic, not enough to tangle labels.
+    mx = (x1 + x2) / 2.0 - dy / d * d * 0.06;
+    my = (y1 + y2) / 2.0 + dx / d * d * 0.06;
     return "M " + str(x1) + " " + str(y1)
         + " Q " + str(mx) + " " + str(my)
         + " " + str(x2) + " " + str(y2);
@@ -676,16 +718,17 @@ def:pub BrainGraph(
             <rect x={vx - vw} y={vy - vh} width={vw * 3} height={vh * 3} fill="transparent" onClick={clear}/>
 
             {for l in shown {
+                builds = l.kind == "builds";
                 <path
                     key={l.source + "-" + l.target}
-                    className={"glink builds" if l.kind == "builds" else "glink"}
+                    className={"glink builds" if builds else "glink"}
                     d={edge_path(at[l.source].x, at[l.source].y, at[l.target].x, at[l.target].y)}
                     fill="none"
                     pathLength={1}
-                    strokeWidth={1.8}
+                    strokeWidth={2.4 if builds else 1.35}
                     strokeOpacity={
-                        0.9 if focused and l.source in near and l.target in near
-                        else (0.06 if focused else 0.12 + l.weight * 0.4)
+                        0.85 if focused and l.source in near and l.target in near
+                        else (0.05 if focused else (0.28 if builds else 0.14 + l.weight * 0.22))
                     }
                 />
             }}

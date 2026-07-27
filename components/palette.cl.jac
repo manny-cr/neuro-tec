@@ -35,11 +35,11 @@ def:pub cat_color(name: str) -> str {
     return "#5b8cff";
 }
 
-"""Node radius. Skills read as hubs; thoughts grow with how often they connect."""
+"""Node radius. Skills read as hubs; thoughts stay compact with light strength gain."""
 def:pub node_radius(kind: str, strength: int) -> float {
-    capped = strength if strength < 8 else 8;
+    capped = strength if strength < 6 else 6;
     if kind == "skill" {
-        return 24.0 + capped * 2.6;
+        return 18.0 + capped * 1.4;
     }
-    return 13.0 + capped * 2.8;
+    return 7.5 + capped * 1.1;
 }

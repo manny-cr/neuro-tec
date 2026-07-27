@@ -399,19 +399,18 @@ body {
 
 .graph-svg.panning { cursor: grabbing; }
 
-/* Links. Curved beziers; opacity encodes weight (set inline). `builds`
-   edges are tinted toward the accent so skill wiring reads differently
-   from thought-to-thought relatedness. Each path draws itself in on mount
-   via the pathLength=1 dash trick. */
+/* Links. Relatedness stays zinc-quiet; builds edges carry the accent.
+   Each path draws itself in on mount via the pathLength=1 dash trick. */
 .glink {
-  stroke: #5b8cff70;
+  stroke: #8b93a855;
+  stroke-linecap: round;
   stroke-dasharray: 1;
   stroke-dashoffset: 0;
   animation: edge-draw 700ms ease 150ms backwards;
   transition: stroke-opacity 200ms ease;
 }
 
-.glink.builds { stroke: #5b8cffaa; }
+.glink.builds { stroke: #5b8cff99; }
 
 @keyframes edge-draw {
   from { stroke-dashoffset: 1; }
@@ -422,37 +421,51 @@ body {
   cursor: pointer;
   transform-box: fill-box;
   transform-origin: center;
-  animation: node-in 550ms cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+  animation: node-in 480ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
   transition: opacity 200ms ease;
 }
 
 @keyframes node-in {
-  from { opacity: 0; transform: scale(0); }
+  from { opacity: 0; transform: scale(0.72); }
 }
 
-.gnode.dim { opacity: 0.16; }
+.gnode.dim { opacity: 0.14; }
 
 .gnode-core { transition: r 200ms ease; }
 
-.gnode-glow { opacity: 0.18; }
+.gnode-glow { opacity: 0.12; }
+
+.gnode-sheen { opacity: 0.22; pointer-events: none; }
+
+.gnode-pupil { opacity: 0.92; pointer-events: none; }
+
+.gnode-ring-track {
+  stroke: #ffffff14;
+  pointer-events: none;
+}
 
 /* Mastery ring on skill nodes - the arc animates when reps change. */
 .gnode-ring {
-  opacity: 0.9;
+  opacity: 0.85;
   transition: stroke-dasharray 600ms ease;
+  pointer-events: none;
 }
 
 /* Size and halo width are set inline in world units so labels hold a fixed
    screen size across zoom levels; only appearance lives here. */
 .glabel {
-  font-weight: 550;
+  font-weight: 500;
+  letter-spacing: -0.01em;
   paint-order: stroke;
-  stroke: #0a0b0f;
+  stroke: #0a0a0c;
   pointer-events: none;
   animation: fade 180ms ease;
 }
 
-.glabel.skill { font-weight: 700; }
+.glabel.skill {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
 
 /* Zoom controls */
 .zoom-controls {
@@ -2197,16 +2210,15 @@ body {
 }
 
 .graph-screen.cinematic .glink {
-  stroke: #5b8cff88;
+  stroke: #8b93a866;
 }
 
 .graph-screen.cinematic .glink.builds {
-  stroke: #5b8cffcc;
+  stroke: #5b8cffaa;
 }
 
 .graph-screen.cinematic .gnode-glow {
-  opacity: 0.3;
-  fill: #5b8cff;
+  opacity: 0.16;
 }
 
 /* ── Calendar tab ──────────────────────────────────────────────────── */
