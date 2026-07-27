@@ -1,7 +1,7 @@
-"""Brain home - futuristic first tab.
+"""Brain home - the living first tab.
 
-Hero is the brain visual (teammate art at assets/brain.png). Recent
-thoughts sit below. Tap the brain to open the Graph tab.
+Hero is the brain visual (teammate art at assets/brain.png). Greeting,
+one skill to continue, and recent thoughts that open on the Graph.
 """
 
 sv import from endpoints { GraphNode, GraphLink, SkillView }
@@ -9,18 +9,38 @@ sv import from endpoints { GraphNode, GraphLink, SkillView }
 import from .palette { cat_color }
 import from .Feed { short_date }
 import from .MiniConstellation { MiniConstellation }
+import from .Skills { level_of }
 
-def:pub RecentRow(item: GraphNode) -> JsxElement {
+"""Local-time greeting. Uses the JS Date constructor via Jac's `new`."""
+def:pub greet(name: str) -> str {
+    hour = int(new(Date).getHours());
+    when = "Good afternoon";
+    if hour < 12 {
+        when = "Good morning";
+    } elif hour >= 18 {
+        when = "Good evening";
+    }
+    return when + ", " + name;
+}
+
+def:pub RecentRow(
+    item: GraphNode,
+    onOpen: Callable[[str], None]
+) -> JsxElement {
     tint = cat_color(item.category);
     title = item.label if item.label else item.detail;
 
-    return <article className="recent-row">
+    def handle(_e: MouseEvent) {
+        onOpen(item.id);
+    }
+
+    return <button className="recent-row" onClick={handle}>
         <span className="recent-dot" style={{"background": tint}} aria-hidden="true"></span>
         <span className="recent-body">
             <span className="recent-title">{title}</span>
             <span className="recent-meta">{item.category + " · " + short_date(item.created_at)}</span>
         </span>
-    </article>;
+    </button>;
 }
 
 def:pub BrainHome(
@@ -30,7 +50,8 @@ def:pub BrainHome(
     busy: bool,
     onCapture: Callable[[], None],
     onDemo: Callable[[], None],
-    onOpenGraph: Callable[[], None]
+    onOpenGraph: Callable[[], None],
+    onOpenNode: Callable[[str], None]
 ) -> JsxElement {
     has query: str = "",
         useFallback: bool = False;
@@ -49,8 +70,32 @@ def:pub BrainHome(
 
     ordered = filtered[::-1];
     recent = ordered[:8] if len(ordered) > 8 else ordered;
-
     caption = str(total) + " thoughts · " + str(len(skills)) + " skills";
+
+    # Nearest skill to its next level — same nudge Skills uses.
+    nextId = "";
+    nextName = "";
+    nextMastery = 0.0;
+    nextNeed = 0;
+    nextLevel = "";
+    bestGap = 9999;
+    for s in skills {
+        goal = s.target;
+        label = "Fluent";
+        if s.mastery < 0.6 {
+            goal = round(s.target * 0.6);
+            label = "Solid";
+        }
+        need = goal - s.reps;
+        if need > 0 and need < bestGap {
+            bestGap = need;
+            nextNeed = need;
+            nextLevel = label;
+            nextId = s.id;
+            nextName = s.name;
+            nextMastery = s.mastery;
+        }
+    }
 
     def onQueryChange(e: any) {
         query = e.target.value;
@@ -68,13 +113,20 @@ def:pub BrainHome(
         onOpenGraph();
     }
 
+    def openContinue(_e: MouseEvent) {
+        if nextId {
+            onOpenNode(nextId);
+        }
+    }
+
     def artFailed(_e: any) {
         useFallback = True;
     }
 
     return <div className="scroll brain-home">
-        <header className="brain-top compact">
+        <header className="brain-top">
             <p className="brain-mark">Neurotech</p>
+            <h1 className="greeting">{greet("Mercedes")}</h1>
         </header>
 
         {if useFallback {
@@ -115,6 +167,25 @@ def:pub BrainHome(
             skip;
         }}
 
+        {if nextId {
+            <button key="continue" className="continue-row" onClick={openContinue}>
+                <span className="continue-kicker">
+                    {str(nextNeed) + (" more thought" if nextNeed == 1 else " more thoughts")
+                     + " to reach " + nextLevel}
+                </span>
+                <span className="continue-head">
+                    <span className="continue-name">{nextName}</span>
+                    <span className="continue-pct">{level_of(nextMastery)}</span>
+                </span>
+                <span className="bar-track tall">
+                    <span
+                        className="bar-fill accent"
+                        style={{"width": str(nextMastery * 100.0) + "%"}}
+                    ></span>
+                </span>
+            </button>
+        }}
+
         <section className="home-section">
             <div className="section-row">
                 <h2 className="section-label">Recent</h2>
@@ -133,7 +204,7 @@ def:pub BrainHome(
             }}
             <div className="recent-list">
                 {for n in recent {
-                    <RecentRow key={n.id} item={n}/>
+                    <RecentRow key={n.id} item={n} onOpen={onOpenNode}/>
                 }}
             </div>
         </section>
