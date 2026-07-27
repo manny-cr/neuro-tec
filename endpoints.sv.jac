@@ -23,11 +23,15 @@ to `:priv` to give every signed-in user their own isolated brain.
 import math;
 import from datetime { datetime, timedelta }
 
-# Layout space. Portrait to match a phone: a square canvas letterboxes into
-# the middle third of the screen and wastes most of it. Keep these in sync
-# with the viewBox in components/BrainGraph.cl.jac.
+# Layout space. Portrait to match a phone: a square canvas spreads the graph
+# into a shape the screen cannot use. Only the ratio matters - the client
+# fits the camera to whatever bounding box these positions produce, so this
+# no longer has to agree with any constant over there.
 glob CANVAS: float = 1000.0;
 glob CANVAS_H: float = 1700.0;
+
+# Ceiling on the per-axis aspect correction in `refit`.
+glob STRETCH_CAP: float = 1.25;
 
 glob CATEGORIES: list[str] = [
     "idea", "memory", "goal", "learning", "health", "reflection"
@@ -320,12 +324,18 @@ def:pub delete_thought(id: str) -> bool {
     return False;
 }
 
-"""Force-directed layout over a 1000x1000 space.
+"""Force-directed layout over the portrait canvas.
 
 Deterministic on purpose: seeded by phyllotaxis rather than an RNG, so the
 same brain lays out identically on every load and nodes don't teleport
 between refreshes. Connected nodes pull together, everything else pushes
 apart, and gravity keeps the cluster centered.
+
+Gravity is an ellipse, not a circle: the horizontal pull is far stronger than
+the vertical one, so the cloud is squeezed inward on the axis the phone frame
+is short on and repulsion vents the slack upward and downward. Repulsion and
+springs stay isotropic, which is what keeps local spacing even - the cluster
+grows tall without any node pair being drawn closer together.
 """
 def layout(ids: list[str], links: list[GraphLink]) -> dict[str, list[float]] {
     pos: dict[str, list[float]] = {};
@@ -402,7 +412,7 @@ def layout(ids: list[str], links: list[GraphLink]) -> dict[str, list[float]] {
 
         cap = CANVAS * 0.05 * cool + 0.5;
         for tid in ids {
-            vx = (push[tid][0] + (center - pos[tid][0]) * 0.030) * 0.016;
+            vx = (push[tid][0] + (center - pos[tid][0]) * 0.120) * 0.016;
             vy = (push[tid][1] + (middle - pos[tid][1]) * 0.018) * 0.016;
             mag = math.sqrt(vx * vx + vy * vy);
             if mag > cap {
@@ -424,7 +434,15 @@ def layout(ids: list[str], links: list[GraphLink]) -> dict[str, list[float]] {
 Force simulation converges to whatever size the forces balance at, which for
 a small graph is a little clump in the middle of a big empty frame. Rescaling
 the bounding box to the viewport is what makes the graph look designed rather
-than merely simulated. Uniform scale, so relative distances survive.
+than merely simulated.
+
+The scale is nearly uniform, but not quite. Elliptical gravity gets the cloud
+close to the frame's proportions; how close depends on the graph's topology,
+which varies as the brain grows, so the residual is corrected here. Whichever
+axis is short is expanded to meet the frame - never the reverse, so the
+correction cannot move two nodes closer together - and the expansion is
+capped at `STRETCH_CAP`, because a few percent of anisotropy is invisible in
+a force graph while a heavy stretch reads as a squashed picture.
 """
 def refit(pos: dict[str, list[float]], ids: list[str]) -> dict[str, list[float]] {
     if len(ids) < 2 {
@@ -444,14 +462,28 @@ def refit(pos: dict[str, list[float]], ids: list[str]) -> dict[str, list[float]]
         return pos;
     }
 
+    want = CANVAS_H / CANVAS;
+    have = span_y / span_x;
+    stretch_x = 1.0;
+    stretch_y = 1.0;
+    if have < want {
+        stretch_y = min(want / have, STRETCH_CAP);
+    } else {
+        stretch_x = min(have / want, STRETCH_CAP);
+    }
+    span_x = span_x * stretch_x;
+    span_y = span_y * stretch_y;
+
     scale = min((CANVAS - pad * 2.0) / span_x, (CANVAS_H - pad * 2.0) / span_y);
-    off_x = (CANVAS - span_x * scale) / 2.0 - min(xs) * scale;
-    off_y = (CANVAS_H - span_y * scale) / 2.0 - min(ys) * scale;
+    sx = stretch_x * scale;
+    sy = stretch_y * scale;
+    off_x = (CANVAS - span_x * scale) / 2.0 - min(xs) * sx;
+    off_y = (CANVAS_H - span_y * scale) / 2.0 - min(ys) * sy;
 
     out: dict[str, list[float]] = {};
     for i in ids {
         if i in pos {
-            out[i] = [pos[i][0] * scale + off_x, pos[i][1] * scale + off_y];
+            out[i] = [pos[i][0] * sx + off_x, pos[i][1] * sy + off_y];
         }
     }
     return out;

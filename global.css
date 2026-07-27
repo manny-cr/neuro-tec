@@ -1,7 +1,10 @@
 /* Neurotech - second brain, mobile-first.
    Restraint over glow: flat zinc surfaces, one steel accent, quiet type. */
 
-@import url("https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap");
+/* Variable axis rather than fixed cuts: the UI leans on in-between weights
+   (450 for quiet labels, 550 for nav, 650 for headings) that would otherwise
+   snap to the nearest static instance. */
+@import url("https://fonts.googleapis.com/css2?family=Geist:wght@300..700&display=swap");
 
 :root {
   /* Surfaces */
@@ -72,9 +75,25 @@ html, body, #root {
 body {
   background: #080809;
   color: var(--text);
-  font-family: "Sora", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
   overscroll-behavior: none;
+}
+
+/* The platform focus ring is a bright box that reads as a rendering bug in
+   screenshots of the phone mock. Keyboard users still get a clear indicator,
+   in the accent. `:focus-visible` means a pointer tap never shows it. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Full-bleed controls have no room outside themselves for a ring. */
+.tab:focus-visible,
+.skill-row:focus-visible,
+.recent-row:focus-visible,
+.focus-row:focus-visible {
+  outline-offset: -3px;
 }
 
 /* ── iPhone device mock (desktop) ──────────────────────────────────── */
@@ -341,6 +360,14 @@ body {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   padding: 4px 16px calc(var(--tabbar-h) + 28px);
+  /* Desktop scrollbar chrome would sit on the phone's right bezel; a real
+     handset never shows one. Scrolling itself is untouched. */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scroll::-webkit-scrollbar {
+  display: none;
 }
 
 /* Tab switches slide the incoming view up through a fade. Only direct
@@ -415,19 +442,17 @@ body {
   transition: stroke-dasharray 600ms ease;
 }
 
+/* Size and halo width are set inline in world units so labels hold a fixed
+   screen size across zoom levels; only appearance lives here. */
 .glabel {
-  font-size: 21px;
   font-weight: 550;
   paint-order: stroke;
   stroke: #0a0b0f;
-  stroke-width: 5px;
   pointer-events: none;
+  animation: fade 180ms ease;
 }
 
-.glabel.skill {
-  font-size: 25px;
-  font-weight: 700;
-}
+.glabel.skill { font-weight: 700; }
 
 /* Zoom controls */
 .zoom-controls {
@@ -1033,7 +1058,9 @@ body {
   flex: 1;
   height: 8px;
   border-radius: 999px;
-  background: #ffffff0f;
+  /* Needs to be visible enough that the unfilled remainder reads as "how
+     much is left"; below about 0.1 the bar looks like a floating line. */
+  background: #ffffff1c;
   overflow: hidden;
 }
 
@@ -1227,7 +1254,7 @@ body {
   margin: 0;
   font-size: var(--fs-xl);
   font-weight: 600;
-  letter-spacing: -0.045em;
+  letter-spacing: -0.025em;
   line-height: 1.12;
 }
 
@@ -1475,7 +1502,7 @@ body {
   margin: 0;
   font-size: 22px;
   font-weight: 600;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.02em;
 }
 
 .brain-empty p {
@@ -1734,7 +1761,7 @@ body {
   margin: 0 0 4px;
   font-size: 22px;
   font-weight: 600;
-  letter-spacing: -0.035em;
+  letter-spacing: -0.022em;
 }
 
 .graph-metrics {
@@ -1843,6 +1870,131 @@ body {
 }
 
 .graph-panel .glass-card { margin-bottom: 12px; }
+
+/* ── Skills ────────────────────────────────────────────────────────── */
+
+.skills-page { padding-top: 34px; }
+
+.skills-top {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 22px;
+}
+
+.skills-title {
+  margin: 0;
+  font-size: var(--fs-xl);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+}
+
+.skills-summary {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+
+.skills-next {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+  line-height: 1.45;
+}
+
+.skills-next-count {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.skill-list {
+  display: grid;
+  border-top: 1px solid var(--border);
+}
+
+.skill-row {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 2px 15px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  animation: card-in 320ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+.skill-row:active { background: #ffffff06; }
+
+.skill-row-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* One line only: a single wrapping name would bulge its row and break the
+   cadence the list depends on. */
+.skill-row-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-md);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+.skill-row-level {
+  font-size: var(--fs-sm);
+  font-weight: 450;
+  color: var(--text-3);
+  flex: 0 0 auto;
+}
+
+/* Count rides alongside the bar rather than below it - on its own line it
+   cost a quarter of the row height and left the number stranded. */
+.skill-row-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.skill-row-progress .bar-track { flex: 1; }
+
+.skill-row-meta {
+  flex: 0 0 auto;
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.skills-empty {
+  display: grid;
+  gap: 16px;
+  justify-items: center;
+  margin-top: 22vh;
+  padding: 0 12px;
+  text-align: center;
+}
+
+.skills-empty p {
+  margin: 0;
+  max-width: 26ch;
+  font-size: var(--fs-md);
+  line-height: 1.5;
+  color: var(--text-2);
+}
+
+.skills-empty .primary-btn {
+  width: auto;
+  padding: 12px 22px;
+}
 
 /* ── Profile ───────────────────────────────────────────────────────── */
 

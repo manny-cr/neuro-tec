@@ -103,6 +103,11 @@ def:pub app -> JsxElement {
         focus = "";
     }
 
+    def openSkillInGraph(id: str) -> None {
+        tab = "graph";
+        focus = id;
+    }
+
     def dismissError(_e: MouseEvent) -> None {
         error = "";
     }
@@ -211,7 +216,13 @@ def:pub app -> JsxElement {
                 />
             }}
             {if tab == "skills" {
-                <Skills key="skills" nodes={nodes} links={links} skills={skills}/>
+                <Skills
+                    key="skills"
+                    skills={skills}
+                    busy={busy}
+                    onOpenSkill={openSkillInGraph}
+                    onCapture={startHere}
+                />
             }}
             {if tab == "profile" {
                 <div key="profile" className="scroll profile-page">

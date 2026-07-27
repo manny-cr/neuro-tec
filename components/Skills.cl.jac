@@ -1,127 +1,124 @@
 """What the graph says you are getting better at.
 
 Mastery is never entered by the user - it is counted from the thoughts that
-point at each skill. That is the whole argument of the app: capture memory,
-and the skill picture assembles itself.
+point at each skill. This screen does one job: show that formation.
 """
 
-sv import from endpoints { GraphNode, GraphLink, SkillView }
+sv import from endpoints { SkillView }
 
-import from .palette { categories, cat_color }
-
-def:pub SkillCard(skill: SkillView) -> JsxElement {
-    pct = skill.mastery * 100.0;
-    level = "Practising";
-    if skill.mastery >= 1.0 {
-        level = "Fluent";
-    } elif skill.mastery >= 0.6 {
-        level = "Solid";
-    } elif skill.mastery < 0.3 {
-        level = "Just started";
+"""Level label derived from mastery, so the row never needs a legend."""
+def:pub level_of(mastery: float) -> str {
+    if mastery >= 1.0 {
+        return "Fluent";
     }
-
-    return <article className="card">
-        <div className="card-top">
-            <span className="skill-name">{skill.name}</span>
-            <span className="card-meta">{level}</span>
-        </div>
-        <p className="card-links" style={{"margin": "0 0 10px"}}>{skill.blurb}</p>
-        <div className="bar-track">
-            <span
-                className="bar-fill"
-                style={{"width": str(pct) + "%", "background": "#6d7cfa"}}
-            ></span>
-        </div>
-        <p className="card-links">
-            {str(skill.reps) + " of " + str(skill.target) + " thoughts feeding it"}
-        </p>
-    </article>;
+    if mastery >= 0.6 {
+        return "Solid";
+    }
+    if mastery < 0.3 {
+        return "Just started";
+    }
+    return "Practising";
 }
 
-def:pub Bar(name: str, count: int, total: int) -> JsxElement {
-    pct = 0.0 if total == 0 else count / total * 100.0;
+def:pub SkillRow(
+    skill: SkillView,
+    index: int,
+    onOpen: Callable[[str], None]
+) -> JsxElement {
+    def handle(_e: MouseEvent) {
+        onOpen(skill.id);
+    }
 
-    return <div className="bar-row">
-        <span className="bar-name">{name}</span>
-        <span className="bar-track">
-            <span
-                className="bar-fill"
-                style={{"width": str(pct) + "%", "background": cat_color(name)}}
-            ></span>
+    pct = skill.mastery * 100.0;
+    delay = index * 40;
+    if delay > 320 {
+        delay = 320;
+    }
+
+    return <button
+        className="skill-row"
+        style={{"animationDelay": str(delay) + "ms"}}
+        onClick={handle}
+    >
+        <span className="skill-row-head">
+            <span className="skill-row-name">{skill.name}</span>
+            <span className="skill-row-level">{level_of(skill.mastery)}</span>
         </span>
-        <span className="bar-val">{str(count)}</span>
-    </div>;
+        <span className="skill-row-progress">
+            <span className="bar-track tall">
+                <span className="bar-fill accent" style={{"width": str(pct) + "%"}}></span>
+            </span>
+            <span className="skill-row-meta">
+                {str(skill.reps) + " of " + str(skill.target) + " thoughts"}
+            </span>
+        </span>
+    </button>;
 }
 
 def:pub Skills(
-    nodes: list[GraphNode],
-    links: list[GraphLink],
-    skills: list[SkillView]
+    skills: list[SkillView],
+    busy: bool,
+    onOpenSkill: Callable[[str], None],
+    onCapture: Callable[[MouseEvent], None]
 ) -> JsxElement {
-    thoughts = [n for n in nodes if n.kind == "thought"];
-    counts: dict[str, int] = {};
-    for t in thoughts {
-        counts[t.category] = counts[t.category] + 1 if t.category in counts else 1;
+    ranked = sorted(skills, key=lambda (s: SkillView) -> float { return 0.0 - s.mastery; });
+
+    summary = "";
+    if len(ranked) > 0 {
+        summary = str(len(ranked)) + " forming · strongest " + ranked[0].name;
     }
 
-    # Counted as we go, not via len(): len() of a dict compiles to `undefined`
-    # in the browser, which would render the Unlinked tile as NaN.
-    seen: dict[str, bool] = {};
-    connected = 0;
-    for l in links {
-        if l.kind == "link" {
-            if not (l.source in seen) {
-                seen[l.source] = True;
-                connected += 1;
-            }
-            if not (l.target in seen) {
-                seen[l.target] = True;
-                connected += 1;
-            }
+    # Nearest skill to its next level, so the nudge is always actionable.
+    nextName = "";
+    nextNeed = 0;
+    nextLevel = "";
+    bestGap = 9999;
+    for s in ranked {
+        goal = s.target;
+        label = "Fluent";
+        if s.mastery < 0.6 {
+            goal = round(s.target * 0.6);
+            label = "Solid";
+        }
+        need = goal - s.reps;
+        if need > 0 and need < bestGap {
+            bestGap = need;
+            nextNeed = need;
+            nextName = s.name;
+            nextLevel = label;
         }
     }
 
-    total = len(thoughts);
-    strongest = sorted(skills, key=lambda (s: SkillView) -> float { return 0.0 - s.mastery; });
+    return <div className="scroll skills-page">
+        <header className="skills-top">
+            <h1 className="skills-title">Skills</h1>
+            {if summary {
+                <p className="skills-summary">{summary}</p>
+            }}
+            {if nextName {
+                <p className="skills-next">
+                    <span className="skills-next-count">
+                        {str(nextNeed) + (" more thought" if nextNeed == 1 else " more thoughts")}
+                    </span>
+                    {" to reach " + nextLevel + " on " + nextName}
+                </p>
+            }}
+        </header>
 
-    return <div className="scroll">
-        <p className="section-title">Skills forming</p>
-        {if len(skills) == 0 {
-            <p className="card-links">Capture a few thoughts and skills will emerge here.</p>
+        {if len(ranked) == 0 {
+            <div key="empty" className="skills-empty">
+                <p>Capture learning or goals — skills appear automatically.</p>
+                <button className="primary-btn" onClick={onCapture} disabled={busy}>
+                    Capture a thought
+                </button>
+            </div>
             skip;
         }}
-        {for s in strongest {
-            <SkillCard key={s.id} skill={s}/>
-        }}
 
-        <p className="section-title">Memory mix</p>
-        {for name in categories() {
-            <Bar
-                key={name}
-                name={name}
-                count={counts[name] if name in counts else 0}
-                total={total}
-            />
-        }}
-
-        <p className="section-title">Graph shape</p>
-        <div className="stat-grid">
-            <div className="stat">
-                <div className="stat-num">{str(total)}</div>
-                <div className="stat-lbl">Thoughts</div>
-            </div>
-            <div className="stat">
-                <div className="stat-num">{str(len(links))}</div>
-                <div className="stat-lbl">Connections</div>
-            </div>
-            <div className="stat">
-                <div className="stat-num">{str(len(skills))}</div>
-                <div className="stat-lbl">Skills</div>
-            </div>
-            <div className="stat">
-                <div className="stat-num">{str(total - connected)}</div>
-                <div className="stat-lbl">Unlinked</div>
-            </div>
+        <div className="skill-list">
+            {for (i, s) in enumerate(ranked) {
+                <SkillRow key={s.id} skill={s} index={i} onOpen={onOpenSkill}/>
+            }}
         </div>
     </div>;
 }

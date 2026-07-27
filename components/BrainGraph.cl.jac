@@ -8,10 +8,15 @@ encodes link weight.
 Positions arrive precomputed from the server walker; this component owns the
 camera. One-finger drag pans (with momentum on release), two-finger pinch and
 the trackpad wheel zoom, the +/- controls do the same for anyone who prefers
-buttons, and tapping a node glides the camera to it. The camera and gesture
-bookkeeping live in module `glob`s rather than `has` state - pointer events
-and animation frames outrun React re-renders, so reactive reads would be
-stale mid-gesture. State only mirrors the camera for rendering.
+buttons, and tapping a node frames it with its neighbours. The camera and
+gesture bookkeeping live in module `glob`s rather than `has` state - pointer
+events and animation frames outrun React re-renders, so reactive reads would
+be stale mid-gesture. State only mirrors the camera for rendering.
+
+The viewport aspect is measured from the container rather than assumed, so
+the viewBox always matches the element it renders into. Assuming the server's
+canvas ratio here letterboxes twice (once in the camera, once again in
+`preserveAspectRatio`) and throws away most of the screen.
 """
 
 sv import from endpoints { GraphNode, GraphLink, SkillView }
@@ -19,13 +24,38 @@ sv import from endpoints { GraphNode, GraphLink, SkillView }
 import from .palette { cat_color, node_radius }
 
 glob WORLD_W: float = 1000.0;
-glob WORLD_H: float = 1700.0;
 glob MIN_W: float = 320.0;
 glob MAX_W: float = 2200.0;
+
+# Labels are drawn at a fixed *screen* size, so they stay readable at every
+# zoom instead of shrinking with the world.
+glob LABEL_PX: float = 12.0;
+glob SKILL_LABEL_PX: float = 13.5;
+
+# Apple's minimum touch target is 44pt; a thought dot renders around 12px at
+# fit zoom, so every node carries an invisible circle of at least this radius.
+glob HIT_PX: float = 22.0;
+
+# Thought labels would smother the overview, so they appear only once the
+# camera is close enough for them to be legible.
+glob LABEL_ZOOM_W: float = 700.0;
+
+# Half the average glyph advance, as a fraction of font size. Estimating a
+# label's width this way avoids measuring text in the DOM every render.
+glob LABEL_EM: float = 0.29;
+
+# Assumed share of the stage hidden by the detail sheet before one exists to
+# measure. Keeps the very first selection from landing underneath it.
+glob SHEET_FRAC: float = 0.46;
 
 # Camera source of truth (see module docstring). `seen` remembers the node
 # count so the auto-fit fires on first data and again after a wipe+reseed.
 glob cam: dict[str, float] = {"x": 0.0, "y": 0.0, "w": 1000.0, "seen": 0.0};
+
+# Measured container box: width in CSS px and aspect as height/width. A glob
+# for the same reason the camera is one - `fit_camera` runs inside the mount
+# effect and needs the value measured moments earlier, not last render's.
+glob view: dict[str, float] = {"w": 380.0, "ar": 1.7};
 
 # Non-reactive gesture state.
 glob gesture: dict[str, float] = {
@@ -59,6 +89,8 @@ def:pub GraphNodeMark(
     item: GraphNode,
     index: int,
     mastery: float,
+    scale: float,
+    labelX: float,
     dim: bool,
     lit: bool,
     labelled: bool,
@@ -71,6 +103,14 @@ def:pub GraphNodeMark(
     skill = item.kind == "skill";
     color = "#c9d1ff" if skill else cat_color(item.category);
     r = node_radius(item.kind, item.strength);
+
+    # `scale` is world units per screen pixel: multiplying by it pins a
+    # measurement to the screen so zoom cannot shrink it away.
+    hit = HIT_PX * scale;
+    if hit < r {
+        hit = r;
+    }
+    label_px = (SKILL_LABEL_PX if skill else LABEL_PX) * scale;
 
     klass = "gnode";
     if dim {
@@ -92,6 +132,7 @@ def:pub GraphNodeMark(
     circ = 6.28318 * ring_r;
 
     return <g className={klass} style={{"animationDelay": str(delay) + "ms"}} onClick={handle}>
+        <circle cx={item.x} cy={item.y} r={hit} fill="transparent" pointerEvents="all"/>
         {if lit {
             <circle key="glow" className="gnode-glow" cx={item.x} cy={item.y} r={r * 2.4} fill={color}/>
         }}
@@ -132,10 +173,14 @@ def:pub GraphNodeMark(
             <text
                 key="label"
                 className={"glabel skill" if skill else "glabel"}
-                x={item.x}
-                y={item.y + (ring_r if skill else r) + 26}
+                x={labelX}
+                y={item.y + (ring_r if skill else r) + label_px * 1.4}
                 textAnchor="middle"
                 fill={color}
+                style={{
+                    "fontSize": str(label_px) + "px",
+                    "strokeWidth": str(3.0 * scale) + "px"
+                }}
             >
                 {trim(item.label, 17 if skill else 22)}
             </text>
@@ -167,10 +212,12 @@ def:pub BrainGraph(
     onPick: Callable[[str], None],
     onClear: Callable[[], None]
 ) -> JsxElement {
-    # Render mirror of the camera glob.
+    # Render mirror of the camera glob, plus the measured container box.
     has vx: float = 0.0,
         vy: float = 0.0,
         vw: float = 1000.0,
+        cw: float = 380.0,
+        car: float = 1.7,
         panning: bool = False;
 
     def set_cam(x: float, y: float, w: float) -> None {
@@ -182,10 +229,37 @@ def:pub BrainGraph(
         vw = w;
     }
 
-    """World units per screen pixel at the current zoom ('meet' fit)."""
+    """Read the container box so the viewBox can match it exactly.
+
+    Called on mount and again at the start of every interaction rather than
+    from a resize listener, which would need teardown this component has no
+    hook for. The guards make it a no-op when nothing has actually moved.
+    """
+    def measure_view() -> None {
+        el: any = document.querySelector(".graph-svg");
+        if not el {
+            return;
+        }
+        rect = el.getBoundingClientRect();
+        w = float(rect.width);
+        h = float(rect.height);
+        if w < 1.0 or h < 1.0 {
+            return;
+        }
+        view["w"] = w;
+        view["ar"] = h / w;
+        if w != cw {
+            cw = w;
+        }
+        if view["ar"] != car {
+            car = view["ar"];
+        }
+    }
+
+    """World units per screen pixel at the current zoom."""
     def world_per_px(el: any) -> float {
         rect = el.getBoundingClientRect();
-        vh = cam["w"] * WORLD_H / WORLD_W;
+        vh = cam["w"] * view["ar"];
         sx = rect.width / cam["w"];
         sy = rect.height / vh;
         s = sx if sx < sy else sy;
@@ -202,8 +276,8 @@ def:pub BrainGraph(
             w = MAX_W;
         }
         cx = cam["x"] + cam["w"] / 2.0;
-        cy = cam["y"] + (cam["w"] * WORLD_H / WORLD_W) / 2.0;
-        set_cam(cx - w / 2.0, cy - (w * WORLD_H / WORLD_W) / 2.0, w);
+        cy = cam["y"] + (cam["w"] * view["ar"]) / 2.0;
+        set_cam(cx - w / 2.0, cy - (w * view["ar"]) / 2.0, w);
     }
 
     """The single rAF loop: inertia after a flick, or a glide to a target."""
@@ -250,25 +324,53 @@ def:pub BrainGraph(
         motion["mode"] = 0.0;
     }
 
-    """Animate the camera to centre (nx, ny), zooming in a touch."""
-    def glide_to(nx: float, ny: float) -> None {
-        tw = cam["w"] if cam["w"] < 750.0 else 750.0;
+    """Glide the camera so (cx, cy) centres a box of `tw` world units wide.
+
+    `band` is the fraction of the viewport actually visible - the detail
+    sheet covers the rest - so the target is centred in what the user can
+    see rather than behind the sheet.
+    """
+    def glide_to(cx: float, cy: float, tw: float, band: float) -> None {
+        w = tw;
+        if w < MIN_W {
+            w = MIN_W;
+        }
+        if w > MAX_W {
+            w = MAX_W;
+        }
         motion["token"] = motion["token"] + 1.0;
         motion["mode"] = 2.0;
         motion["t"] = 0.0;
         motion["sx"] = cam["x"];
         motion["sy"] = cam["y"];
         motion["sw"] = cam["w"];
-        motion["tx"] = nx - tw / 2.0;
-        motion["ty"] = ny - (tw * WORLD_H / WORLD_W) / 2.0 + tw * 0.25;
-        motion["tw"] = tw;
+        motion["tx"] = cx - w / 2.0;
+        motion["ty"] = cy - w * view["ar"] * band / 2.0;
+        motion["tw"] = w;
         run_motion();
+    }
+
+    """How much of the stage the open detail sheet eats, measured live."""
+    def sheet_fraction() -> float {
+        stage: any = document.querySelector(".graph-stage");
+        sheet: any = document.querySelector(".node-sheet");
+        if stage and sheet {
+            stage_h = float(stage.getBoundingClientRect().height);
+            sheet_h = float(sheet.getBoundingClientRect().height);
+            if stage_h > 1.0 {
+                f = sheet_h / stage_h;
+                if f > 0.05 and f < 0.7 {
+                    return f;
+                }
+            }
+        }
+        return SHEET_FRAC;
     }
 
     """Frame the whole graph with breathing room."""
     def fit_camera() -> None {
         if len(nodes) == 0 {
-            set_cam(0.0, 0.0, 1000.0);
+            set_cam(0.0, 0.0, WORLD_W);
             return;
         }
         minx = nodes[0].x;
@@ -281,27 +383,28 @@ def:pub BrainGraph(
             if n.y < miny { miny = n.y; }
             if n.y > maxy { maxy = n.y; }
         }
-        pad = 120.0;
+        pad = 70.0;
         w = maxx - minx + pad * 2.0;
         h = maxy - miny + pad * 2.0;
-        w_for_h = h * WORLD_W / WORLD_H;
+        w_for_h = h / view["ar"];
         if w_for_h > w {
             w = w_for_h;
         }
-        if w < 500.0 {
-            w = 500.0;
+        if w < MIN_W {
+            w = MIN_W;
         }
         if w > MAX_W {
             w = MAX_W;
         }
         set_cam(
             (minx + maxx) / 2.0 - w / 2.0,
-            (miny + maxy) / 2.0 - (w * WORLD_H / WORLD_W) / 2.0,
+            (miny + maxy) / 2.0 - (w * view["ar"]) / 2.0,
             w
         );
     }
 
     can with [nodes] entry {
+        measure_view();
         if len(nodes) > 0 and cam["seen"] == 0.0 {
             fit_camera();
         }
@@ -311,6 +414,7 @@ def:pub BrainGraph(
     def pointer_down(e: Event) {
         p = e as any;
         stop_motion();
+        measure_view();
         if gesture["mode"] == 0.0 {
             gesture["mode"] = 1.0;
             gesture["id1"] = p.pointerId;
@@ -385,21 +489,25 @@ def:pub BrainGraph(
     def wheel(e: Event) {
         p = e as any;
         stop_motion();
+        measure_view();
         apply_zoom(cam["w"] * 1.12 if p.deltaY > 0 else cam["w"] / 1.12);
     }
 
     def zoom_in(_e: MouseEvent) {
         stop_motion();
+        measure_view();
         apply_zoom(cam["w"] / 1.3);
     }
 
     def zoom_out(_e: MouseEvent) {
         stop_motion();
+        measure_view();
         apply_zoom(cam["w"] * 1.3);
     }
 
     def zoom_reset(_e: MouseEvent) {
         stop_motion();
+        measure_view();
         fit_camera();
     }
 
@@ -410,11 +518,52 @@ def:pub BrainGraph(
         at[n.id] = n;
     }
 
+    shown = [l for l in links if l.source in at and l.target in at];
+
+    """Frame a node together with everything it connects to.
+
+    Centring the node alone is not enough: selecting it opens the sheet over
+    the lower half of the stage, and the neighbours it just lit up are what
+    the user wants to see. So the whole neighbourhood is fitted into the band
+    the sheet leaves visible.
+    """
+    def focus_on(id: str) -> None {
+        n = at[id];
+        minx = n.x;
+        maxx = n.x;
+        miny = n.y;
+        maxy = n.y;
+        for l in shown {
+            other = "";
+            if l.source == id {
+                other = l.target;
+            } elif l.target == id {
+                other = l.source;
+            }
+            if other and other in at {
+                o = at[other];
+                if o.x < minx { minx = o.x; }
+                if o.x > maxx { maxx = o.x; }
+                if o.y < miny { miny = o.y; }
+                if o.y > maxy { maxy = o.y; }
+            }
+        }
+
+        band = 1.0 - sheet_fraction();
+        pad = 130.0;
+        tw = maxx - minx + pad * 2.0;
+        w_for_h = (maxy - miny + pad * 2.0) / (view["ar"] * band);
+        if w_for_h > tw {
+            tw = w_for_h;
+        }
+        glide_to((minx + maxx) / 2.0, (miny + maxy) / 2.0, tw, band);
+    }
+
     # A tap that travelled is a pan, not a pick. Selecting glides the camera.
     def pick(id: str) -> None {
         if gesture["moved"] < 8.0 {
             if id != focus and id in at {
-                glide_to(at[id].x, at[id].y);
+                focus_on(id);
             }
             onPick(id);
         }
@@ -425,8 +574,6 @@ def:pub BrainGraph(
             onClear();
         }
     }
-
-    shown = [l for l in links if l.source in at and l.target in at];
 
     masteryOf: dict[str, float] = {};
     for s in skills {
@@ -453,8 +600,32 @@ def:pub BrainGraph(
         }
     }
 
-    vh = vw * WORLD_H / WORLD_W;
+    # Matching the viewBox to the measured container makes `meet` a no-op,
+    # so nothing is letterboxed away.
+    vh = vw * car;
     box = str(vx) + " " + str(vy) + " " + str(vw) + " " + str(vh);
+
+    # World units per screen pixel, for anything that must hold its size.
+    scale = vw / cw if cw > 1.0 else 1.0;
+    close_up = vw < LABEL_ZOOM_W;
+
+    # Labels sit centred under their node, so one belonging to a node at the
+    # edge of the frame would run off it. Nudging the text back inside costs
+    # nothing, where padding the camera enough to fit it would throw away a
+    # chunk of the viewport on every graph.
+    labelAt: dict[str, float] = {};
+    for n in visible {
+        half = LABEL_EM * len(trim(n.label, 17 if n.kind == "skill" else 22))
+             * (SKILL_LABEL_PX if n.kind == "skill" else LABEL_PX) * scale;
+        lx = n.x;
+        if lx - half < vx {
+            lx = vx + half;
+        }
+        if lx + half > vx + vw {
+            lx = vx + vw - half;
+        }
+        labelAt[n.id] = lx;
+    }
 
     return <div className="graph-wrap">
         <svg
@@ -490,9 +661,15 @@ def:pub BrainGraph(
                     item={n}
                     index={i}
                     mastery={masteryOf[n.id] if n.id in masteryOf else 0.0}
+                    scale={scale}
+                    labelX={labelAt[n.id]}
                     dim={focused and n.id not in near}
                     lit={focused and n.id == focus}
-                    labelled={n.kind == "skill" or (focused and n.id in near)}
+                    labelled={
+                        n.kind == "skill"
+                        or (focused and n.id in near)
+                        or (close_up and not focused)
+                    }
                     onPick={pick}
                 />
             }}
