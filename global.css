@@ -2199,3 +2199,964 @@ body {
   opacity: 0.3;
   fill: #5b8cff;
 }
+
+/* ── Calendar tab ──────────────────────────────────────────────────── */
+
+/* Six slots now: Brain, Graph, capture, Calendar, Skills, Profile. The
+   labels get tight at phone width, so they tighten rather than wrap. */
+.tabbar.six {
+  grid-template-columns: repeat(6, 1fr);
+}
+
+.tabbar.six .tab {
+  font-size: 11px;
+  letter-spacing: -0.01em;
+}
+
+.cal-screen {
+  display: grid;
+  gap: 18px;
+  align-content: start;
+}
+
+.cal-head {
+  display: grid;
+  gap: 4px;
+}
+
+.cal-title {
+  margin: 0;
+  font-size: var(--fs-xl);
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.cal-sub {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+}
+
+/* The month itself: a raised card so it reads as the calendar object on the
+   screen rather than as a table drawn on the background. */
+.cal-card {
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--bg-elev);
+  padding: 14px 12px 12px;
+}
+
+.cal-month-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2px 10px;
+}
+
+.cal-month-label {
+  font-size: var(--fs-md);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.cal-arrow {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: none;
+  color: var(--text-2);
+  cursor: pointer;
+}
+
+.cal-arrow:active { transform: scale(0.94); }
+.cal-arrow:hover { color: var(--text); border-color: var(--border-strong); }
+
+.cal-weekdays,
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+
+.cal-weekdays {
+  padding-bottom: 6px;
+}
+
+.cal-weekdays span {
+  text-align: center;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--text-3);
+}
+
+.cal-grid {
+  gap: 2px;
+}
+
+/* Square-ish cells via aspect-ratio so the grid keeps its shape at any
+   width without a magic pixel height. */
+.cal-day {
+  position: relative;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  gap: 0;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+  padding: 0;
+}
+
+.cal-day-num {
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.cal-day.out { color: var(--text-3); opacity: 0.45; }
+
+.cal-day.today .cal-day-num {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.cal-day.sel {
+  background: var(--accent-strong);
+}
+
+.cal-day.sel .cal-day-num { color: #fff; font-weight: 650; }
+
+/* The dot: the whole point of the grid. Sits under the numeral rather than
+   behind it so a busy day never becomes unreadable. */
+.cal-day-dot {
+  position: absolute;
+  bottom: 5px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.cal-day.sel .cal-day-dot { background: #fff; }
+.cal-day.out .cal-day-dot { opacity: 0.5; }
+
+.cal-list-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cal-list-head .section-label { margin: 0; }
+
+.text-btn.sm { font-size: var(--fs-xs); }
+
+.cal-list {
+  display: grid;
+  gap: 8px;
+}
+
+.cal-row {
+  display: grid;
+  grid-template-columns: 62px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--bg-elev);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cal-row:active { transform: scale(0.99); }
+.cal-row:hover { border-color: var(--border-strong); }
+
+.cal-row.live { border-color: var(--accent); }
+.cal-row.done { opacity: 0.55; }
+
+.cal-row-time {
+  font-size: var(--fs-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-2);
+}
+
+.cal-row-body {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.cal-row-title {
+  font-size: var(--fs-md);
+  font-weight: 550;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cal-row-meta {
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+}
+
+.cal-row-intent {
+  font-size: var(--fs-xs);
+  color: var(--accent);
+}
+
+.cal-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: live-pulse 2s ease-in-out infinite;
+}
+
+@keyframes live-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+/* Connect state */
+.cal-connect {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+  margin-top: 28px;
+  max-width: 30ch;
+}
+
+.cal-connect h2 {
+  margin: 6px 0 0;
+  font-size: var(--fs-lg);
+  font-weight: 600;
+}
+
+.cal-connect p {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+  line-height: 1.5;
+}
+
+.cal-connect-note { color: var(--text-3) !important; font-size: var(--fs-xs) !important; }
+
+.cal-connect-art {
+  width: 100%;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--bg-elev);
+}
+
+.cal-connect-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.cal-connect-grid span {
+  aspect-ratio: 1;
+  border-radius: 6px;
+  background: var(--accent-soft);
+}
+
+.cal-connect-grid span:nth-child(3),
+.cal-connect-grid span:nth-child(6),
+.cal-connect-grid span:nth-child(11) {
+  background: var(--accent);
+}
+
+/* ── Event screen ──────────────────────────────────────────────────── */
+
+.event-screen {
+  display: grid;
+  gap: 20px;
+  align-content: start;
+}
+
+.ev-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  justify-self: start;
+  border: 0;
+  background: none;
+  color: var(--text-2);
+  font: inherit;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+  padding: 0;
+}
+
+.ev-back:hover { color: var(--text); }
+
+.ev-head { display: grid; gap: 6px; }
+
+.ev-title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 650;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.ev-count {
+  margin: 0;
+  font-size: var(--fs-md);
+  font-weight: 600;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.ev-meta {
+  margin: 0;
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+}
+
+.ev-section { display: grid; gap: 10px; }
+
+.ev-section.bordered {
+  border-top: 1px solid var(--border);
+  padding-top: 18px;
+}
+
+.ev-section .section-label { margin: 0; }
+
+.ev-section-sub {
+  margin: -4px 0 2px;
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+  line-height: 1.5;
+}
+
+.ev-intents { display: grid; gap: 8px; }
+
+.ev-intent {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  gap: 10px;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--bg-elev);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ev-intent:hover { border-color: var(--border-strong); }
+.ev-intent:active { transform: scale(0.99); }
+.ev-intent.on { border-color: var(--accent); background: var(--accent-soft); }
+
+.ev-intent-mark {
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  border: 1.6px solid var(--border-strong);
+  border-radius: 50%;
+}
+
+.ev-intent.on .ev-intent-mark {
+  border-color: var(--accent);
+  background:
+    radial-gradient(circle, var(--accent) 0 4px, transparent 4.5px);
+}
+
+.ev-intent-body { display: grid; gap: 3px; min-width: 0; }
+
+.ev-intent-title { font-size: var(--fs-md); font-weight: 550; }
+
+.ev-intent-sub {
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+  line-height: 1.45;
+}
+
+.ev-intervals { display: flex; flex-wrap: wrap; gap: 7px; }
+
+.ev-chip {
+  padding: 8px 13px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: none;
+  color: var(--text-2);
+  font: inherit;
+  font-size: var(--fs-xs);
+  font-weight: 550;
+  cursor: pointer;
+}
+
+.ev-chip:hover { border-color: var(--border-strong); color: var(--text); }
+.ev-chip.on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+.ev-remaining,
+.ev-note {
+  margin: 0;
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+  line-height: 1.5;
+}
+
+.ev-reflect { display: grid; gap: 8px; }
+
+.ev-reflect-btn {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--bg-elev);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-md);
+  cursor: pointer;
+}
+
+.ev-reflect-btn:hover { border-color: var(--border-strong); }
+.ev-reflect-btn.on { border-color: var(--accent); background: var(--accent-soft); }
+
+/* The reminder banner. Sticks to the top of the scroller so an answer is
+   always one tap away while the event is running. */
+.ev-banner {
+  position: sticky;
+  top: 8px;
+  z-index: 30;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--bg-glass);
+  backdrop-filter: blur(14px);
+  animation: view-in 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.ev-banner.affirmed { border-color: var(--accent); }
+
+.ev-ask { display: grid; gap: 4px; }
+
+.ev-ask h3 { margin: 0; font-size: var(--fs-lg); font-weight: 600; }
+
+.ev-ask p { margin: 0; font-size: var(--fs-sm); color: var(--text-2); }
+
+.ev-ask-intent { color: var(--accent) !important; font-weight: 550; padding-top: 2px; }
+
+.ev-ask-btns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding-top: 10px;
+}
+
+.ev-ask-btns .primary-btn,
+.ev-ask-btns .ghost-btn { margin: 0; }
+
+.ev-affirmed { display: grid; gap: 4px; text-align: center; padding: 6px 0; }
+
+.ev-affirmed-big {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--accent);
+}
+
+.ev-affirmed-sub { margin: 0; font-size: var(--fs-sm); color: var(--text-2); }
+
+.ev-deferred { display: grid; gap: 6px; }
+
+.ev-deferred-big { margin: 0; font-size: var(--fs-md); font-weight: 550; }
+
+.ev-deferred p { margin: 0; font-size: var(--fs-sm); color: var(--text-2); }
+
+.ghost-btn.wide-quiet { width: 100%; margin-top: 6px; }
+
+/* Priming overlay: covers the screen inside the phone, not the page. */
+.ev-priming {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--bg-overlay);
+  backdrop-filter: blur(10px);
+}
+
+.ev-priming-card { display: grid; gap: 10px; text-align: center; }
+
+.ev-priming-kicker {
+  margin: 0;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.ev-priming-card h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 650;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.ev-priming-rehearse {
+  margin: 0 0 8px;
+  font-size: var(--fs-sm);
+  color: var(--text-2);
+  line-height: 1.55;
+}
+
+.ev-skel-title,
+.ev-skel-card {
+  border-radius: var(--r-md);
+  background: var(--bg-elev);
+  animation: skel-pulse 1.4s ease-in-out infinite;
+}
+
+.ev-skel-title { height: 34px; width: 65%; }
+.ev-skel-card { height: 150px; margin-top: 16px; }
+
+@keyframes skel-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+/* ── Confetti ──────────────────────────────────────────────────────── */
+
+/* Fixed to the phone screen, not the page: the burst fills the frame the
+   user is looking at. Never takes pointer events, so the banner underneath
+   stays tappable mid-celebration. */
+.confetti-sky {
+  position: absolute;
+  inset: 0;
+  z-index: 80;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.confetti-piece {
+  position: absolute;
+  top: -24px;
+  border-radius: 1.5px;
+  opacity: 0;
+  animation-name: confetti-fall;
+  animation-timing-function: cubic-bezier(0.35, 0.15, 0.5, 1);
+  animation-fill-mode: forwards;
+}
+
+@keyframes confetti-fall {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  8% { opacity: 1; }
+  80% { opacity: 1; }
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--drift), 105vh, 0) rotate(var(--spin));
+  }
+}
+
+/* The phone screen clips the burst; on a real phone the viewport does. */
+.iphone-screen .confetti-sky { border-radius: inherit; }
+
+@media (prefers-reduced-motion: reduce) {
+  .confetti-piece { animation-duration: 0.01ms !important; opacity: 0 !important; }
+  .cal-live-dot { animation: none; }
+}
+
+/* ── Goal ──────────────────────────────────────────────────────────── */
+
+/* The reminder line. Chrome, not content: hairline below, no card, and the
+   quietest type on the screen. */
+.goalbar {
+  position: relative;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  padding: 8px 16px 9px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+
+/* Inside the device mock the island needs clearing here instead of in the
+   scroller, since the bar is now the topmost thing on the screen. */
+.shell .goalbar { padding-top: 46px; }
+
+/* With a bar in place the scrollers no longer clear the island themselves. */
+.shell.has-goal .scroll { padding-top: 12px; }
+.shell.has-goal .graph-chrome { padding-top: 14px; }
+
+.goalbar-dot {
+  flex: 0 0 auto;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.goalbar-text {
+  margin: 0;
+  min-width: 0;
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--text-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* First run. Covers the screen inside the phone -- the tabs stay mounted
+   underneath so saving reveals a brain that has already loaded. */
+.goal-setup {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  align-items: center;
+  padding: 32px 22px calc(var(--tabbar-h) + 12px);
+  background: var(--bg);
+  overflow-y: auto;
+  animation: view-in 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.goal-setup-inner { display: grid; gap: 12px; align-content: center; }
+
+.goal-kicker {
+  margin: 0;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.goal-ask {
+  margin: 2px 0 0;
+  font-size: 32px;
+  font-weight: 650;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+
+.goal-lede {
+  margin: 0 0 6px;
+  font-size: var(--fs-sm);
+  line-height: 1.55;
+  color: var(--text-2);
+}
+
+.goal-input {
+  width: 100%;
+  padding: 14px 15px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+  background: var(--bg-elev);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-md);
+  outline: none;
+}
+
+.goal-input::placeholder { color: var(--text-3); }
+
+.goal-input:focus {
+  border-color: var(--accent);
+  background: var(--bg-sheet);
+}
+
+.goal-or {
+  margin: 8px 0 0;
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+}
+
+.goal-presets { display: grid; gap: 7px; }
+
+.goal-chip {
+  width: 100%;
+  padding: 11px 13px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: none;
+  color: var(--text-2);
+  font: inherit;
+  font-size: var(--fs-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.goal-chip:hover { border-color: var(--border-strong); color: var(--text); }
+.goal-chip:active { transform: scale(0.99); }
+
+.goal-chip.on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+.goal-setup .primary-btn { margin-top: 10px; }
+.goal-setup .primary-btn:disabled { opacity: 0.4; cursor: default; }
+
+/* ── Post-event survey ─────────────────────────────────────────────── */
+
+.survey {
+  position: absolute;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  align-items: center;
+  padding: 26px 22px calc(var(--tabbar-h) + 10px);
+  background: var(--bg);
+  overflow-y: auto;
+  animation: view-in 340ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* The recalling brain. Sits behind the content, fills the screen, and is
+   never interactive. */
+.recall-field {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.recall-core {
+  transform-origin: 200px 250px;
+  animation: recall-swell 4.8s ease-in-out infinite;
+}
+
+@keyframes recall-swell {
+  0%, 100% { opacity: 0.5; transform: scale(0.92); }
+  50%      { opacity: 1;   transform: scale(1.06); }
+}
+
+.recall-wires line {
+  stroke: #5b8cff;
+  stroke-opacity: 0.32;
+  stroke-width: 1.2;
+}
+
+.recall-cells circle {
+  fill: #5b8cff;
+  fill-opacity: 0.5;
+  animation: recall-breathe 3.6s ease-in-out infinite;
+}
+
+@keyframes recall-breathe {
+  0%, 100% { fill-opacity: 0.4; }
+  50%      { fill-opacity: 1; }
+}
+
+/* The travelling signal. A short dash chases the whole length of the path
+   on a loop -- one element per path, no JS. */
+.recall-signal {
+  fill: none;
+  stroke: #a8c4ff;
+  stroke-width: 2.8;
+  stroke-linecap: round;
+  stroke-dasharray: 30 1000;
+  filter: drop-shadow(0 0 7px #5b8cff);
+  animation-name: recall-travel;
+  animation-timing-function: cubic-bezier(0.5, 0, 0.5, 1);
+  animation-iteration-count: infinite;
+}
+
+@keyframes recall-travel {
+  0%   { stroke-dashoffset: 1026; opacity: 0; }
+  12%  { opacity: 1; }
+  88%  { opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 0; }
+}
+
+/* Content sits above the field, on its own scrim so the text stays legible
+   over a moving background. */
+.survey-body {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 16px;
+  align-content: center;
+  padding: 20px 18px 22px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  /* Deliberately thin, and only lightly blurred: the pulsing field has to
+     stay legible *through* the card, not just around it. A heavier scrim
+     hides the one thing this screen is built around. */
+  background: #0a0a0cad;
+  backdrop-filter: blur(3px);
+}
+
+.survey-head { display: grid; gap: 5px; }
+
+.survey-kicker {
+  margin: 0;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.survey-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 650;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.survey-lede {
+  margin: 0;
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  color: var(--text-2);
+}
+
+.survey-axis { display: grid; gap: 8px; }
+
+.survey-prompt {
+  font-size: var(--fs-sm);
+  font-weight: 550;
+  color: var(--text);
+}
+
+.survey-scale {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.survey-word {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--accent);
+  text-align: center;
+}
+
+/* Slider. Styled from scratch on both engines: the native control carries a
+   platform accent colour that has nothing to do with this palette. The track
+   is one box with a gradient stop at --fill, so there is no second element to
+   keep in sync at any width. */
+.survey-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 26px;
+  background: none;
+  cursor: pointer;
+}
+
+.survey-range::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--accent) 0 var(--fill),
+    #ffffff1c var(--fill) 100%
+  );
+}
+
+.survey-range::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--accent) 0 var(--fill),
+    #ffffff1c var(--fill) 100%
+  );
+}
+
+.survey-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  margin-top: -8px;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 6px #0009;
+  transition: transform 120ms ease;
+}
+
+.survey-range::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 6px #0009;
+}
+
+.survey-range:active::-webkit-slider-thumb { transform: scale(1.15); }
+.survey-range:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+
+.survey-body .primary-btn { margin-top: 4px; }
+.survey-body .primary-btn:disabled { opacity: 0.5; }
+
+.survey-skip { justify-self: center; }
+
+/* Recorded result, back on the event screen. */
+.ev-readout { display: grid; gap: 9px; }
+
+.ev-readout-row {
+  display: grid;
+  grid-template-columns: 74px 1fr;
+  align-items: center;
+  gap: 10px;
+}
+
+.ev-readout-label {
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+}
+
+.ev-readout-track {
+  height: 6px;
+  border-radius: 999px;
+  background: #ffffff14;
+  overflow: hidden;
+}
+
+.ev-readout-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .recall-core,
+  .recall-cells circle,
+  .recall-signal { animation: none; }
+  .recall-signal { opacity: 0.5; stroke-dashoffset: 0; stroke-dasharray: none; }
+}

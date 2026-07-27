@@ -14,11 +14,21 @@ import from .components.Composer { Composer }
 import from .components.Skills { Skills }
 import from .components.ConfirmDialog { ConfirmDialog }
 import from .components.BrainPortrait { BrainPortrait }
+import from .components.CalendarScreen { CalendarScreen }
+import from .components.EventScreen { EventScreen }
+import from .components.GoalSetup { GoalSetup }
+import from .components.GoalBar { GoalBar }
 import from .components.palette { cat_color }
 
 sv import from endpoints {
     GraphNode, GraphLink, SkillView, LoadBrain,
-    create_thought, delete_thought, seed_demo, reset_brain
+    create_thought, delete_thought, seed_demo, reset_brain,
+    get_goal, set_goal
+}
+
+sv import from reinforce.api {
+    EventView, ConnectionView,
+    get_connection, connect_demo, list_events, sync_events
 }
 
 def:pub app -> JsxElement {
@@ -34,21 +44,60 @@ def:pub app -> JsxElement {
         loaded: bool = False,
         error: str = "",
         confirmWipe: bool = False,
-        pendingDelete: str = "";
+        pendingDelete: str = "",
+        # ── Calendar ──────────────────────────────────────────────────────
+        events: list[EventView] = [],
+        calConnected: bool = False,
+        calConnecting: bool = False,
+        calDay: str = "",
+        openEvent: str = "",
+        # ── Goal ──────────────────────────────────────────────────────────
+        goal: str = "",
+        # Distinct from `goal` being empty: until the first read lands we do
+        # not know whether this is a first-time user, and guessing would flash
+        # the goal screen at someone who already has one.
+        goalLoaded: bool = False,
+        goalSaving: bool = False;
 
     async can with entry {
         refresh();
+        loadCalendar();
+        loadGoal();
     }
 
     async def refresh -> None;
+    async def loadGoal -> None;
+    async def saveGoal(text: str) -> None;
     async def submit(text: str, cat: str) -> None;
     async def confirmDelete -> None;
     async def loadDemo -> None;
     async def wipe -> None;
+    async def loadCalendar -> None;
+    async def connectCalendar -> None;
 
     def choose(name: str) -> None {
         tab = name;
         focus = "";
+        # Leaving the calendar drops back to the month view, so returning to
+        # the tab never resumes on an event you have moved on from.
+        if name != "calendar" {
+            openEvent = "";
+        }
+    }
+
+    def pickDay(key: str) -> None {
+        calDay = key;
+    }
+
+    def openEventScreen(id: str) -> None {
+        openEvent = id;
+    }
+
+    def closeEventScreen() -> None {
+        # Re-read the calendar so an intention set on the detail screen shows
+        # on the row you came back to.
+        openEvent = "";
+        loadCalendar();
     }
 
     def toggle(name: str) -> None {
@@ -163,7 +212,11 @@ def:pub app -> JsxElement {
             <div className="iphone-frame">
                 <div className="iphone-island" aria-hidden="true"></div>
                 <div className="iphone-screen">
-                    <div className="shell">
+                    <div className={"shell has-goal" if goal else "shell"}>
+        {#* The reminder line. Above the stage, so it holds on every tab
+            rather than being re-stated inside each one. *#}
+        <GoalBar text={goal}/>
+
         {if error {
             <div key="toast" className="toast" role="alert">
                 <span>{error}</span>
@@ -218,6 +271,28 @@ def:pub app -> JsxElement {
                     onExpandLegend={flipLegend}
                     onDelete={deleteFocused}
                     onCapture={startHere}
+                />
+            }}
+            {#* The calendar lives here, in the frame, like every other tab.
+                The event screen swaps in over it -- same shell, same tab bar,
+                so opening an event never leaves the phone. *#}
+            {if tab == "calendar" and openEvent {
+                <EventScreen
+                    key={"event-" + openEvent}
+                    eventId={openEvent}
+                    onBack={closeEventScreen}
+                />
+            }}
+            {if tab == "calendar" and not openEvent {
+                <CalendarScreen
+                    key="calendar"
+                    events={events}
+                    connected={calConnected}
+                    busy={calConnecting}
+                    selectedDay={calDay}
+                    onSelectDay={pickDay}
+                    onOpen={openEventScreen}
+                    onConnect={connectCalendar}
                 />
             }}
             {if tab == "skills" {
@@ -309,6 +384,13 @@ def:pub app -> JsxElement {
                 onConfirm={confirmDelete}
                 onCancel={cancelDelete}
             />
+        }}
+
+        {#* First run. An overlay rather than a branch around the whole shell:
+            the tabs stay mounted underneath, so saving a goal reveals a brain
+            that has already finished loading instead of starting over. *#}
+        {if goalLoaded and not goal {
+            <GoalSetup key="goal-setup" busy={goalSaving} onSave={saveGoal}/>
         }}
                     </div>
                 </div>
