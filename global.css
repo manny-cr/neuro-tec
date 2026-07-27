@@ -2489,3 +2489,139 @@ body {
   .confetti-piece { animation-duration: 0.01ms !important; opacity: 0 !important; }
   .cal-live-dot { animation: none; }
 }
+
+/* ── Goal ──────────────────────────────────────────────────────────── */
+
+/* The reminder line. Chrome, not content: hairline below, no card, and the
+   quietest type on the screen. */
+.goalbar {
+  position: relative;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  padding: 8px 16px 9px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+
+/* Inside the device mock the island needs clearing here instead of in the
+   scroller, since the bar is now the topmost thing on the screen. */
+.shell .goalbar { padding-top: 46px; }
+
+/* With a bar in place the scrollers no longer clear the island themselves. */
+.shell.has-goal .scroll { padding-top: 12px; }
+.shell.has-goal .graph-chrome { padding-top: 14px; }
+
+.goalbar-dot {
+  flex: 0 0 auto;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.goalbar-text {
+  margin: 0;
+  min-width: 0;
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--text-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* First run. Covers the screen inside the phone -- the tabs stay mounted
+   underneath so saving reveals a brain that has already loaded. */
+.goal-setup {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  align-items: center;
+  padding: 32px 22px calc(var(--tabbar-h) + 12px);
+  background: var(--bg);
+  overflow-y: auto;
+  animation: view-in 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.goal-setup-inner { display: grid; gap: 12px; align-content: center; }
+
+.goal-kicker {
+  margin: 0;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.goal-ask {
+  margin: 2px 0 0;
+  font-size: 32px;
+  font-weight: 650;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+
+.goal-lede {
+  margin: 0 0 6px;
+  font-size: var(--fs-sm);
+  line-height: 1.55;
+  color: var(--text-2);
+}
+
+.goal-input {
+  width: 100%;
+  padding: 14px 15px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+  background: var(--bg-elev);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-md);
+  outline: none;
+}
+
+.goal-input::placeholder { color: var(--text-3); }
+
+.goal-input:focus {
+  border-color: var(--accent);
+  background: var(--bg-sheet);
+}
+
+.goal-or {
+  margin: 8px 0 0;
+  font-size: var(--fs-xs);
+  color: var(--text-3);
+}
+
+.goal-presets { display: grid; gap: 7px; }
+
+.goal-chip {
+  width: 100%;
+  padding: 11px 13px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: none;
+  color: var(--text-2);
+  font: inherit;
+  font-size: var(--fs-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.goal-chip:hover { border-color: var(--border-strong); color: var(--text); }
+.goal-chip:active { transform: scale(0.99); }
+
+.goal-chip.on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+.goal-setup .primary-btn { margin-top: 10px; }
+.goal-setup .primary-btn:disabled { opacity: 0.4; cursor: default; }

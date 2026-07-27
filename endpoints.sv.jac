@@ -106,6 +106,20 @@ node Skill {
         target: int = 6;
 }
 
+"""The one thing the user is working toward.
+
+A node rather than a field on root: it keeps the "everything is on the graph"
+story intact, and leaves room for a Goal to grow edges later (thoughts that
+served it, skills it needs) without a migration.
+
+There is exactly one. `set_goal` overwrites rather than appending, because a
+list of goals is a different feature with a different screen.
+"""
+node Goal {
+    has text: str,
+        created_at: str = "";
+}
+
 edge Link: Thought --> Thought {
     has weight: float = 0.5;
 }
@@ -319,6 +333,49 @@ def:pub delete_thought(id: str) -> bool {
     }
     return False;
 }
+
+"""The current goal, or "" when the user has not set one yet.
+
+An empty string is what puts a first-time user on the goal screen, so this
+must never raise -- a brain with no Goal node is the normal first state, not
+an error.
+"""
+def:pub get_goal() -> str {
+    found = [root -->[?:Goal]];
+    if found {
+        return found[0].text;
+    }
+    return "";
+}
+
+
+"""Set (or replace) the goal. Returns what was stored.
+
+Blank input clears it, which is also how the user gets back to the goal
+screen deliberately.
+"""
+def:pub set_goal(text: str) -> str {
+    clean = text.strip();
+
+    existing = [root -->[?:Goal]];
+    if existing {
+        if not clean {
+            for g in existing {
+                del g;
+            }
+            return "";
+        }
+        existing[0].text = clean;
+        return clean;
+    }
+
+    if not clean {
+        return "";
+    }
+    fresh = root ++> Goal(text=clean, created_at=datetime.now().isoformat());
+    return fresh.text;
+}
+
 
 """Force-directed layout over a 1000x1000 space.
 

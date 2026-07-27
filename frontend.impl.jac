@@ -116,6 +116,36 @@ impl app.loadDemo -> None {
     busy = False;
 }
 
+impl app.loadGoal -> None {
+    try {
+        current = await get_goal();
+        goal = current;
+    } except Exception {
+        # Treated as "no goal known", not "no goal set": `goalLoaded` stays
+        # False so a dead server shows the loading brain rather than dropping
+        # an existing user back onto the first-run screen.
+        goal = "";
+        return;
+    }
+    goalLoaded = True;
+}
+
+impl app.saveGoal(text: str) -> None {
+    clean = text.strip();
+    if not clean {
+        return;
+    }
+    goalSaving = True;
+    try {
+        stored = await set_goal(clean);
+        goal = stored;
+        error = "";
+    } except Exception {
+        error = "Couldn't save your goal. Try again.";
+    }
+    goalSaving = False;
+}
+
 impl app.loadCalendar -> None {
     # Every intermediate value is held in a LOCAL. Reading a `has` field back
     # after an `await` returns the render-time snapshot, not the value just

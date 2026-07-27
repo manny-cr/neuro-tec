@@ -14,7 +14,10 @@ There is no file-based routing: the calendar is a tab inside the phone shell,
 not a separate route tree, so `app` renders the shell directly.
 """
 
-import from endpoints { Thought, Link, LoadBrain, create_thought, delete_thought }
+import from endpoints {
+    Thought, Link, Goal, LoadBrain,
+    create_thought, delete_thought, get_goal, set_goal
+}
 
 import from reinforce.api {
     EventView, ConnectionView, IntentionPreset,
