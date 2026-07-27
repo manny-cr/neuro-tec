@@ -87,18 +87,19 @@ def:pub BrainHome(
                 onOpen={openGraph}
             />
         } else {
-            <button key="art" className="brain-stage" onClick={openGraph} aria-label="Open graph">
+            <div key="art" className="brain-stage">
                 <div className="brain-stage-void">
-                    <img
-                        className="brain-visual"
-                        src="/static/assets/brain.png"
-                        alt="Your second brain"
-                        onError={artFailed}
+                    <iframe
+                        className="brain-visual-3d"
+                        src="/static/assets/glass-brain.html"
+                        title="Interactive 3D brain. Drag to orbit, scroll to zoom."
                     />
-                    <div className="brain-stage-fog" aria-hidden="true"></div>
                 </div>
                 <p className="brain-stage-caption">{caption if total > 0 else "Your mind, mapped"}</p>
-            </button>
+                <button className="text-btn brain-open-graph" onClick={openGraph}>
+                    Open graph
+                </button>
+            </div>
         }}
 
         {if total == 0 {

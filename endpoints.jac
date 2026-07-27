@@ -256,7 +256,8 @@ def ensure_skill(sname: str, blurb: str, target: int) -> Skill {
     if found {
         return found[0];
     }
-    return root ++> Skill(name=sname, blurb=blurb, target=target);
+    # `++>` yields the list of connected nodes, not a single node.
+    return (root ++> Skill(name=sname, blurb=blurb, target=target))[0];
 }
 
 """Attach a thought to the graph: categorize, link to peers, feed skills."""
@@ -264,12 +265,12 @@ def wire_thought(text: str, category: str, when: str) -> Thought {
     existing = [root -->[?:Thought]];
     cat = category if category in CATEGORIES else classify(text);
 
-    fresh = root ++> Thought(
+    fresh = (root ++> Thought(
         content=text,
         category=cat,
         created_at=when,
         strength=1
-    );
+    ))[0];
 
     mine: set[str] = set();
     for spec in match_skills(text) {
@@ -372,7 +373,7 @@ def:pub set_goal(text: str) -> str {
     if not clean {
         return "";
     }
-    fresh = root ++> Goal(text=clean, created_at=datetime.now().isoformat());
+    fresh = (root ++> Goal(text=clean, created_at=datetime.now().isoformat()))[0];
     return fresh.text;
 }
 
