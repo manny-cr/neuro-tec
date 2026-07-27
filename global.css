@@ -3181,3 +3181,30 @@ body {
   .recall-signal { animation: none; }
   .recall-signal { opacity: 0.5; stroke-dashoffset: 0; stroke-dasharray: none; }
 }
+
+/* 3D glass-brain hero. The viewer stacks its console over the model at narrow
+   widths, so render it at a desktop size and scale it into the phone frame. */
+.brain-stage-void { position: relative; overflow: hidden; border-radius: 18px; aspect-ratio: 1 / 1; }
+.brain-visual-3d {
+    position: absolute; top: 0; left: 0;
+    width: 1180px; height: 1180px;
+    border: 0; background: #04060c;
+    transform: scale(0.2814); transform-origin: top left;
+}
+.brain-open-graph { margin-top: 2px; }
+
+/* This is a phone shell, so desktop scrollbar gutters do not belong in it.
+   Scrolling still works by wheel, trackpad, touch, and keyboard. */
+.scroll,
+.phone,
+.phone * {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+.scroll::-webkit-scrollbar,
+.phone::-webkit-scrollbar,
+.phone *::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+}
