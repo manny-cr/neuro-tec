@@ -247,6 +247,7 @@ def:pub app -> JsxElement {
                     onCapture={openComposerFromBrain}
                     onDemo={loadDemo}
                     onOpenGraph={openGraphFromBrain}
+                    onOpenNode={openSkillInGraph}
                 />
             }}
             {if tab == "graph" {

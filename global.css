@@ -1238,10 +1238,6 @@ body {
   margin-bottom: 4px;
 }
 
-.brain-top.compact {
-  margin-bottom: 0;
-}
-
 .brain-mark {
   margin: 0;
   font-size: var(--fs-sm);
@@ -1251,7 +1247,7 @@ body {
 }
 
 .greeting {
-  margin: 0;
+  margin: 2px 0 0;
   font-size: var(--fs-xl);
   font-weight: 600;
   letter-spacing: -0.025em;
@@ -1344,7 +1340,7 @@ body {
   display: grid;
   gap: 10px;
   width: 100%;
-  margin: 18px 0 4px;
+  margin: 14px 0 6px;
   padding: 0;
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
@@ -1360,7 +1356,7 @@ body {
 
 .constellation-void {
   position: relative;
-  height: 240px;
+  height: min(42vh, 280px);
   overflow: hidden;
 }
 
@@ -1516,6 +1512,7 @@ body {
   display: grid;
   gap: 8px;
   width: 100%;
+  margin-top: 10px;
   padding: 14px 0;
   border: 0;
   border-top: 1px solid var(--border);
@@ -1526,6 +1523,8 @@ body {
   text-align: left;
   cursor: pointer;
 }
+
+.continue-row:active { background: #ffffff06; }
 
 .continue-kicker {
   font-size: var(--fs-xs);
@@ -1613,9 +1612,19 @@ body {
   grid-template-columns: 8px 1fr;
   gap: 12px;
   align-items: start;
+  width: 100%;
   padding: 14px 2px;
+  border: 0;
   border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
 }
+
+.recent-row:active { background: #ffffff06; }
 
 .recent-dot {
   width: 8px;
