@@ -260,8 +260,9 @@ def ensure_skill(sname: str, blurb: str, target: int) -> Skill {
     if found {
         return found[0];
     }
-    # `++>` yields the list of connected nodes, not a single node.
-    return (root ++> Skill(name=sname, blurb=blurb, target=target))[0];
+    # `++>` mirrors its right-hand side: a single-node connect returns the
+    # node, so cast it rather than unwrapping a (no-longer-returned) list.
+    return (root ++> Skill(name=sname, blurb=blurb, target=target)) as Skill;
 }
 
 """Attach a thought to the graph: categorize, link to peers, feed skills."""
@@ -274,7 +275,7 @@ def wire_thought(text: str, category: str, when: str) -> Thought {
         category=cat,
         created_at=when,
         strength=1
-    ))[0];
+    )) as Thought;
 
     mine: set[str] = set();
     for spec in match_skills(text) {
@@ -331,7 +332,14 @@ def:pub create_thought(content: str, category: str = "") -> bool {
 
 """Forget a thought. Deleting the node cascades to all of its edges."""
 def:pub delete_thought(id: str) -> bool {
-    target = jobj(id);
+    # `jobj` raises on a malformed id rather than returning None, so a garbled
+    # id from the client would 500 instead of being reported as "nothing to
+    # delete". Guard it: any id that doesn't resolve to a Thought is a no-op.
+    try {
+        target = jobj(id);
+    } except Exception {
+        return False;
+    }
     if isinstance(target, Thought) {
         del target;
         return True;
@@ -377,7 +385,7 @@ def:pub set_goal(text: str) -> str {
     if not clean {
         return "";
     }
-    fresh = (root ++> Goal(text=clean, created_at=datetime.now().isoformat()))[0];
+    fresh = (root ++> Goal(text=clean, created_at=datetime.now().isoformat())) as Goal;
     return fresh.text;
 }
 
