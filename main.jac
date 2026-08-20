@@ -16,7 +16,8 @@ not a separate route tree, so `app` renders the shell directly.
 
 import from endpoints {
     Thought, Link, Goal, LoadBrain,
-    create_thought, delete_thought, get_goal, set_goal
+    create_thought, delete_thought, get_goal, set_goal,
+    seed_demo, reset_brain
 }
 
 import from reinforce.api {

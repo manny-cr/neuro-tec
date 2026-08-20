@@ -25,7 +25,7 @@ Mobile-first UI with a desktop iPhone preview. Brain hero art, cinematic graph m
 Requires the Jac CLI (`jac` on your `PATH`).
 
 ```bash
-cd neurotech_
+cd neuro-tec
 jac start --dev main.jac
 ```
 
@@ -35,6 +35,7 @@ Useful commands:
 
 ```bash
 jac check .          # type-check
+jac test endpoints.jac   # run the server-side test suite
 jac guide            # list language guides
 ```
 
@@ -42,7 +43,7 @@ jac guide            # list language guides
 
 ```
 main.jac              # entry — mounts client app, registers server
-endpoints.sv.jac      # graph model, LoadBrain, create/delete/seed
+endpoints.jac         # graph model, LoadBrain, create/delete/seed/reset
 frontend.cl.jac       # app shell + tabs
 frontend.impl.jac     # async handlers
 components/           # BrainHome, Graph, Skills, Composer, …
