@@ -1,5 +1,7 @@
 # Neurotech
 
+## About
+
 An AI-powered **second brain** built for Jac Hacks — capture thoughts, watch them wire into a living knowledge graph, and see skills form from what you remember.
 
 Mobile-first UI with a desktop iPhone preview. Brain hero art, cinematic graph map, skills, and profile.
